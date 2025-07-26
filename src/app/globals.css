@@ -1,0 +1,40 @@
+@import "tw-animate-css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  @keyframes fadein {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .animate-fadein {
+    animation: fadein 0.2s ease-in;
+  }
+  @keyframes scalein {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-scalein {
+    animation: scalein 0.2s cubic-bezier(0.4,0,0.2,1);
+  }
+}
+
+:root {
+  --destructive: 27 84.2% 58%; /* 라이트 모드 destructive 배경색 */
+  --destructive-foreground: 0 0% 98.5%; /* 라이트 모드 destructive 텍스트 색상 (거의 흰색) */
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+.bordered-grid .bordered-grid-item {
+  @apply border border-dashed border-zinc-300 dark:border-zinc-700;
+}
