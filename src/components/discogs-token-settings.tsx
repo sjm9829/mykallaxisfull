@@ -10,10 +10,10 @@ import { toast } from "sonner";
 interface DiscogsTokenSettingsProps {
   onClose: () => void;
   discogsToken: string | null; // prop으로 토큰 받기
-  setDiscogsToken: (token: string | null) => void; // prop으로 토큰 설정 함수 받기
+  onTokenChange: (token: string | null) => Promise<void>; // prop으로 토큰 설정 함수 받기
 }
 
-export function DiscogsTokenSettings({ onClose, discogsToken, setDiscogsToken }: DiscogsTokenSettingsProps) {
+export function DiscogsTokenSettings({ onClose, discogsToken, onTokenChange }: DiscogsTokenSettingsProps) {
   const [tokenInput, setTokenInput] = useState<string>("");
   const [isVerifyingToken, setIsVerifyingToken] = useState(false);
 
@@ -39,7 +39,7 @@ export function DiscogsTokenSettings({ onClose, discogsToken, setDiscogsToken }:
       });
 
       if (response.ok) {
-        setDiscogsToken(tokenInput); // prop으로 받은 함수 호출
+        onTokenChange(tokenInput); // prop으로 받은 함수 호출
         toast.success("Discogs 개인 액세스 토큰이 유효하며 저장되었습니다.");
       } else {
         const errorData = await response.json();
