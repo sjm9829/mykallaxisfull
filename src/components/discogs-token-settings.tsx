@@ -54,7 +54,7 @@ export function DiscogsTokenSettings({ onClose, discogsToken, setDiscogsToken }:
   };
 
   const handleDelete = () => {
-    setDiscogsToken(null); // prop으로 받은 함수 호출
+    onTokenChange(null); // prop으로 받은 함수 호출
     setTokenInput("");
     toast.success("Discogs 개인 액세스 토큰이 삭제되었습니다.");
   };

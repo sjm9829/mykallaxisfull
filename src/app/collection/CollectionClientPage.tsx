@@ -164,7 +164,7 @@ export default function CollectionClientPage() {
 
     
 
-    const saveAlbumsToFile = useCallback(async (updatedAlbums: Album[]) => {
+    const saveAlbumsToFile = useCallback(async (updatedAlbums: Album[], currentDiscogsToken: string | null) => {
         if (!fileHandle) return;
 
         let permissionGranted = hasPermission;
@@ -179,13 +179,13 @@ export default function CollectionClientPage() {
                     _metadata: { username: username, collectionName: fileName.replace(".json", "") },
                     albums: updatedAlbums,
                 };
-                if (discogsToken) {
-                    const encryptedToken = await encryptData(discogsToken);
+                if (currentDiscogsToken) {
+                    const encryptedToken = await encryptData(currentDiscogsToken);
                     contentToSave._metadata.encryptedDiscogsToken = encryptedToken;
                 }
                 await saveFile(fileHandle, JSON.stringify(contentToSave, null, 2));
                 await setCollectionMetadata(username, fileName.replace(".json", ""), updatedAlbums.length);
-                toast.success("컬렉션이 파일에 저장되었습니다.");
+                
             } catch (error) {
                 console.error("Failed to save file:", error);
                 toast.error("파일 저장에 실패했습니다.");
@@ -194,18 +194,19 @@ export default function CollectionClientPage() {
             console.error("Permission to write file was denied.");
             toast.error("파일 쓰기 권한이 거부되었습니다.");
         }
-    }, [fileHandle, hasPermission, username, discogsToken, fileName]);
+    }, [fileHandle, hasPermission, username, fileName]);
+
+    const handleSetDiscogsToken = useCallback(async (token: string | null) => {
+        setDiscogsToken(token);
+        // 토큰이 변경될 때만 명시적으로 저장 로직 호출
+        if (fileHandle && token !== undefined) {
+            await saveAlbumsToFile(albums, token);
+        }
+    }, [albums, fileHandle, saveAlbumsToFile]);
 
     useEffect(() => {
         document.title = `My KALLAX is Full`;
     }, [username, fileName]);
-
-    // Save Discogs token to file when it changes
-    useEffect(() => {
-        if (fileHandle && discogsToken !== undefined) { // Only save if fileHandle exists and discogsToken has been loaded/set
-            saveAlbumsToFile(albums); // Pass current albums to save
-        }
-    }, [discogsToken, fileHandle, albums, saveAlbumsToFile]);
 
     const handleAddAlbum = (data: Omit<Album, "id" | "createdAt" | "updatedAt">) => {
         const now = new Date().toISOString();
@@ -217,7 +218,7 @@ export default function CollectionClientPage() {
         };
         const updatedAlbums = [newAlbum, ...albums];
         setAlbums(updatedAlbums);
-        saveAlbumsToFile(updatedAlbums);
+        saveAlbumsToFile(updatedAlbums, discogsToken);
         setShowForm(false);
         toast.success("앨범이 추가되었습니다.");
     };
@@ -230,7 +231,7 @@ export default function CollectionClientPage() {
                     : album
             );
             setAlbums(updatedAlbums);
-            saveAlbumsToFile(updatedAlbums);
+            saveAlbumsToFile(updatedAlbums, discogsToken);
             setEditingAlbum(null);
             toast.success("앨범이 수정되었습니다.");
         }
@@ -240,7 +241,7 @@ export default function CollectionClientPage() {
         if (deleteTarget) {
             const updatedAlbums = albums.filter(a => a.id !== deleteTarget.id);
             setAlbums(updatedAlbums);
-            saveAlbumsToFile(updatedAlbums);
+            saveAlbumsToFile(updatedAlbums, discogsToken);
             if (selectedAlbum?.id === deleteTarget.id) setSelectedAlbum(null);
             setDeleteTarget(null);
             toast.success("앨범이 삭제되었습니다.");
@@ -279,11 +280,10 @@ export default function CollectionClientPage() {
     }, [albums, fileName]);
 
     const handleImportExcel = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-        toast.info("handleImportExcel 함수 호출됨.");
         const file = event.target.files?.[0];
         if (file) {
             toast.info(`파일 감지됨: ${file.name}`);
-            toast.info("엑셀 파일 가져오는 중...");
+            
             importFromExcel(file)
                 .then(data => {
                     setImportedAlbums(data);
@@ -328,12 +328,12 @@ export default function CollectionClientPage() {
             }));
 
             setAlbums(newAlbums);
-            saveAlbumsToFile(newAlbums);
+            saveAlbumsToFile(newAlbums, discogsToken);
             setShowImportConfirm(false);
             setImportedAlbums(null);
             toast.success("엑셀 파일에서 컬렉션을 성공적으로 가져왔습니다!");
         }
-    }, [importedAlbums, saveAlbumsToFile]);
+    }, [importedAlbums, saveAlbumsToFile, discogsToken]);
 
     const cancelImport = useCallback(() => {
         setShowImportConfirm(false);
@@ -625,7 +625,7 @@ export default function CollectionClientPage() {
                             <DiscogsTokenSettings
                                 onClose={() => setShowDiscogsTokenSettings(false)}
                                 discogsToken={discogsToken}
-                                setDiscogsToken={setDiscogsToken}
+                                onTokenChange={handleSetDiscogsToken}
                             />
                         </div>
                     </div>
