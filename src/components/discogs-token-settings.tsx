@@ -29,21 +29,27 @@ export function DiscogsTokenSettings({ onClose, discogsToken, onTokenChange }: D
       return;
     }
 
+    // 토큰에서 잠재적인 문제 문자들을 제거/정리
+    const cleanToken = tokenInput.trim();
+
     setIsVerifyingToken(true);
     try {
-      const response = await fetch('https://api.discogs.com/oauth/identity', {
+      const response = await fetch('/api/discogs/verify-token', {
+        method: 'POST',
         headers: {
-          'User-Agent': 'MKIF-Collection-App/0.1',
-          'Authorization': `Discogs token=${tokenInput}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ token: cleanToken }),
       });
 
-      if (response.ok) {
-        onTokenChange(tokenInput); // prop으로 받은 함수 호출
+      const result = await response.json();
+
+      if (response.ok && result.valid) {
+        await onTokenChange(cleanToken);
         toast.success("Discogs 개인 액세스 토큰이 유효하며 저장되었습니다.");
+        onClose(); // 성공 시 모달 닫기
       } else {
-        const errorData = await response.json();
-        toast.error(`토큰 유효성 검사 실패: ${errorData.message || response.statusText}`);
+        toast.error(`토큰 유효성 검사 실패: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error("토큰 유효성 검사 중 오류 발생:", error);
