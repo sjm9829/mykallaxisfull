@@ -351,6 +351,7 @@ export function AlbumForm({ onSubmit, onCancel, initialData, discogsToken }: Alb
               <select name="priceCurrency" value={formData.priceCurrency} onChange={handleChange} className="p-2 border rounded border-zinc-200 dark:border-zinc-800">
                 <option value="KRW">KRW</option>
                 <option value="USD">USD</option>
+                <option value="JPY">JPY</option>
                 <option value="EUR">EUR</option>
               </select>
             </div>
