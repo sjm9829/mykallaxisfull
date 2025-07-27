@@ -2,6 +2,7 @@ import * as React from "react";
 import type { Album } from "@/types/album";
 import { Star, Trash2 } from "lucide-react";
 import Image from 'next/image';
+import { getPrimaryCoverImage } from "@/lib/album-images";
 
 interface AlbumCardProps {
   album: Album;
@@ -11,6 +12,8 @@ interface AlbumCardProps {
 }
 
 export function AlbumCard({ album, onClick, onDelete }: AlbumCardProps) {
+  const primaryImageUrl = getPrimaryCoverImage(album);
+
   return (
     <div
       className="relative bg-white dark:bg-zinc-900 rounded-lg shadow p-4 flex flex-col items-center gap-2 border border-zinc-200 dark:border-zinc-800 cursor-pointer transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-blue-400 hover:opacity-95 min-h-[200px]"
@@ -29,9 +32,9 @@ export function AlbumCard({ album, onClick, onDelete }: AlbumCardProps) {
         <Trash2 className="w-5 h-5" />
       </button>
       <div className="w-32 h-32 bg-zinc-100 dark:bg-zinc-800 rounded overflow-hidden flex items-center justify-center">
-        {album.coverImageUrl ? (
+        {primaryImageUrl ? (
           <Image
-            src={album.coverImageUrl}
+            src={primaryImageUrl}
             alt={album.title}
             width={128}
             height={128}

@@ -1,7 +1,8 @@
 import * as React from "react";
 import type { Album } from "@/types/album";
-import { Star, X } from "lucide-react";
+import { Star, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useModalAccessibility } from "@/lib/useModalAccessibility";
+import { getAllImages } from "@/lib/album-images";
 import Image from 'next/image';
 
 interface AlbumDetailModalProps {
@@ -23,8 +24,24 @@ const DetailItem = ({ label, value }: { label: string; value?: string | number |
 
 export function AlbumDetailModal({ album, onClose, onEdit, onDelete }: AlbumDetailModalProps) {
   const modalRef = useModalAccessibility(onClose);
-
+  const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
+  
+  const allImages = getAllImages(album);
   const price = album.priceAmount ? `${album.priceAmount.toLocaleString()} ${album.priceCurrency}` : null;
+
+  const nextImage = () => {
+    if (allImages.length > 1) {
+      setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
+    }
+  };
+
+  const prevImage = () => {
+    if (allImages.length > 1) {
+      setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+    }
+  };
+
+  const currentImage = allImages[currentImageIndex];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fadein p-4">
@@ -45,13 +62,74 @@ export function AlbumDetailModal({ album, onClose, onEdit, onDelete }: AlbumDeta
 
         <div className="flex flex-col md:flex-row items-start gap-6">
           <div className="w-full md:w-48 flex-shrink-0 text-center">
-            <div className="w-40 h-40 md:w-48 md:h-48 bg-zinc-100 dark:bg-zinc-800 rounded-md overflow-hidden mx-auto flex items-center justify-center shadow-inner">
-              {album.coverImageUrl ? (
-                <Image src={album.coverImageUrl} alt={album.title} width={192} height={192} style={{ objectFit: 'cover' }} />
+            {/* 메인 이미지 표시 */}
+            <div className="relative w-40 h-40 md:w-48 md:h-48 bg-zinc-100 dark:bg-zinc-800 rounded-md overflow-hidden mx-auto flex items-center justify-center shadow-inner">
+              {currentImage ? (
+                <Image 
+                  src={currentImage.url} 
+                  alt={currentImage.description || album.title} 
+                  width={192} 
+                  height={192} 
+                  style={{ objectFit: 'cover' }} 
+                />
               ) : (
                 <span className="text-zinc-400 text-sm">No Image</span>
               )}
+              
+              {/* 이미지 네비게이션 버튼 */}
+              {allImages.length > 1 && (
+                <>
+                  <button
+                    onClick={prevImage}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-1 rounded-full hover:bg-black/70 transition-colors"
+                    aria-label="이전 이미지"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-1 rounded-full hover:bg-black/70 transition-colors"
+                    aria-label="다음 이미지"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </>
+              )}
             </div>
+            
+            {/* 이미지 정보 표시 */}
+            {currentImage && (
+              <div className="mt-2 text-xs text-zinc-500">
+                <div>{currentImage.description}</div>
+                <div>({currentImageIndex + 1} / {allImages.length})</div>
+              </div>
+            )}
+            
+            {/* 썸네일 네비게이션 */}
+            {allImages.length > 1 && (
+              <div className="flex justify-center gap-1 mt-3 flex-wrap">
+                {allImages.map((img, index) => (
+                  <button
+                    key={img.id}
+                    onClick={() => setCurrentImageIndex(index)}
+                    className={`w-8 h-8 rounded overflow-hidden border-2 transition-colors ${
+                      index === currentImageIndex 
+                        ? 'border-blue-500' 
+                        : 'border-zinc-300 dark:border-zinc-600'
+                    }`}
+                  >
+                    <Image
+                      src={img.url}
+                      alt={img.description || `이미지 ${index + 1}`}
+                      width={32}
+                      height={32}
+                      style={{ objectFit: 'cover' }}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+            
             {album.isFavorite && (
               <div className="flex items-center justify-center gap-1 mt-3 text-yellow-500">
                 <Star className="w-5 h-5 fill-current" />

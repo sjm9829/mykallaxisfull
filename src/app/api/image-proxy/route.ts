@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const ALLOWED_HOSTNAMES = ['i.discogs.com', 'img.discogs.com']; // 허용된 이미지 호스트 목록
+// 차단할 도메인 목록 (보안상 위험한 도메인만)
+const BLOCKED_HOSTNAMES = ['localhost', '127.0.0.1', '0.0.0.0'];
 
 export async function GET(request: NextRequest) {
   const imageUrl = request.nextUrl.searchParams.get('url');
@@ -12,22 +13,32 @@ export async function GET(request: NextRequest) {
   let url: URL;
   try {
     url = new URL(imageUrl);
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 });
   }
 
-  // 1. 도메인 화이트리스트 검증
-  if (!ALLOWED_HOSTNAMES.includes(url.hostname)) {
-    return NextResponse.json({ error: 'Image host not allowed' }, { status: 403 });
+  // 1. 위험한 도메인만 차단 (HTTPS 강제)
+  if (url.protocol !== 'https:') {
+    return NextResponse.json({ error: 'Only HTTPS URLs are allowed' }, { status: 403 });
   }
 
-  // 2. 사설 IP 및 로컬호스트 차단 (SSRF 방지)
-  // 이 부분은 서버 환경에서 IP 주소를 직접 확인해야 하지만,
-  // Next.js Edge Runtime에서는 직접적인 IP 확인이 어렵습니다.
-  // 따라서, 호스트네임 기반의 기본적인 방어만 수행합니다.
-  // 더 강력한 방어를 위해서는 별도의 미들웨어 또는 서버리스 함수를 고려해야 합니다.
-  if (url.hostname === 'localhost' || url.hostname.startsWith('127.') || url.hostname.startsWith('10.') || url.hostname.startsWith('172.16.') || url.hostname.startsWith('192.168.')) {
-    return NextResponse.json({ error: 'Access to private network is forbidden' }, { status: 403 });
+  if (BLOCKED_HOSTNAMES.includes(url.hostname)) {
+    return NextResponse.json({ error: 'Access to this host is forbidden' }, { status: 403 });
+  }
+
+  // 2. 사설 IP 주소 차단 (SSRF 방지)
+  const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+  if (ipRegex.test(url.hostname)) {
+    const parts = url.hostname.split('.').map(n => parseInt(n));
+    // 사설 IP 대역 차단: 10.x.x.x, 172.16-31.x.x, 192.168.x.x
+    if (
+      (parts[0] === 10) ||
+      (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
+      (parts[0] === 192 && parts[1] === 168) ||
+      (parts[0] === 127) // 루프백
+    ) {
+      return NextResponse.json({ error: 'Access to private network is forbidden' }, { status: 403 });
+    }
   }
 
   try {

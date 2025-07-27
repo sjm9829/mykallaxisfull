@@ -1,11 +1,13 @@
 import * as React from "react";
-import type { Album, AlbumType, Currency } from "@/types/album";
+import type { Album, AlbumType, Currency, AlbumImage } from "@/types/album";
 import { DiscogsSearchModal, type DiscogsSearchResult } from "./discogs-search-modal";
+import { AlbumImageManager } from "./album-image-manager";
+import { getAllImages } from "@/lib/album-images";
 
 import { X } from "lucide-react";
 
 interface DiscogsReleaseFormat {
-  name: string;
+  name: string
   qty?: string;
   descriptions?: string[];
 }
@@ -46,6 +48,10 @@ export function AlbumForm({ onSubmit, onCancel, initialData, discogsToken }: Alb
     priceCurrency: initialData?.priceCurrency || "KRW",
     purchaseStore: initialData?.purchaseStore || "",
     purchaseDate: initialData?.purchaseDate || "",
+  });
+
+  const [albumImages, setAlbumImages] = React.useState<AlbumImage[]>(() => {
+    return initialData ? getAllImages(initialData) : [];
   });
 
   const [error, setError] = React.useState("");
@@ -175,6 +181,18 @@ export function AlbumForm({ onSubmit, onCancel, initialData, discogsToken }: Alb
             coverImageUrl: releaseData.images?.[0]?.uri || prev.coverImageUrl,
         }));
 
+        // Discogs에서 가져온 모든 이미지를 AlbumImage 형태로 변환
+        if (releaseData.images && releaseData.images.length > 0) {
+            const discogsImages: AlbumImage[] = releaseData.images.map((img: { uri: string }, index: number) => ({
+                id: `discogs-${Date.now()}-${index}`,
+                url: img.uri,
+                type: index === 0 ? 'cover' as const : 'other' as const,
+                description: `Discogs 이미지 ${index + 1}`,
+                isPrimary: index === 0
+            }));
+            setAlbumImages(discogsImages);
+        }
+
     } catch (e: unknown) {
         if (e instanceof Error) {
             setError("선택한 릴리즈의 상세 정보를 가져오는 중 오류가 발생했습니다: " + e.message);
@@ -192,8 +210,14 @@ export function AlbumForm({ onSubmit, onCancel, initialData, discogsToken }: Alb
       setError("앨범명과 아티스트는 필수입니다.");
       return;
     }
+    
+    // 하위 호환성을 위해 coverImageUrl도 설정
+    const primaryImageUrl = albumImages.find(img => img.isPrimary)?.url || albumImages[0]?.url;
+    
     onSubmit({
       ...formData,
+      coverImageUrl: primaryImageUrl, // 하위 호환성
+      images: albumImages.length > 0 ? albumImages : undefined, // 새로운 다중 이미지
       priceAmount: Number(formData.priceAmount) || undefined,
       priceCurrency: formData.priceCurrency as Currency,
       type: formData.type as AlbumType,
@@ -302,10 +326,17 @@ export function AlbumForm({ onSubmit, onCancel, initialData, discogsToken }: Alb
               <label className="block text-sm font-medium mb-1" htmlFor="catalogNo">카탈로그 넘버</label>
               <input id="catalogNo" name="catalogNo" value={formData.catalogNo} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: 1-23801" />
             </div>
+            
+            {/* 다중 이미지 관리 섹션 */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1" htmlFor="coverImageUrl">앨범 커버 URL</label>
-              <input id="coverImageUrl" name="coverImageUrl" type="url" value={formData.coverImageUrl} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="https://example.com/cover.jpg" />
+              <div className="font-bold text-lg border-b pb-2 mb-4">앨범 이미지</div>
+              <AlbumImageManager
+                images={albumImages}
+                onImagesChange={setAlbumImages}
+                className="mb-4"
+              />
             </div>
+            
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-1" htmlFor="description">설명</label>
               <textarea id="description" name="description" value={formData.description} onChange={handleChange} rows={2} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" />

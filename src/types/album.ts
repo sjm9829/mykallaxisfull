@@ -1,6 +1,14 @@
 export type AlbumType = 'Vinyl' | 'CD' | 'Tape' | 'Other';
 export type Currency = 'KRW' | 'USD';
 
+export interface AlbumImage {
+  id: string;
+  url: string;
+  type: 'cover' | 'back' | 'inside' | 'label' | 'other';
+  description?: string;
+  isPrimary: boolean;
+}
+
 export interface Album {
   // 기본 정보
   id: string;
@@ -8,7 +16,8 @@ export interface Album {
   updatedAt: string;
 
   // 앨범 정보
-  coverImageUrl?: string;
+  coverImageUrl?: string; // 하위 호환성을 위해 유지 (deprecated)
+  images?: AlbumImage[]; // 새로운 다중 이미지 필드
   artist: string;
   title: string;
   type: AlbumType;

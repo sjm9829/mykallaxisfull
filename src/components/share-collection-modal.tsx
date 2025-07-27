@@ -3,6 +3,7 @@ import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Album } from '@/types/album';
 import { useModalAccessibility } from '@/lib/useModalAccessibility';
+import { getPrimaryCoverImage } from '@/lib/album-images';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import Image from 'next/image';
@@ -27,6 +28,8 @@ const ItemTypes = {
 
 const DraggableAlbum: React.FC<DraggableAlbumProps> = ({ album, index, moveAlbum }) => {
   const ref = React.useRef<HTMLDivElement>(null);
+  const primaryImageUrl = getPrimaryCoverImage(album);
+  
   const [{ handlerId }, drop] = useDrop<{ id: string, index: number }, unknown, { handlerId: string | symbol | null | undefined }>({
     accept: ItemTypes.ALBUM,
     collect(monitor) {
@@ -102,9 +105,9 @@ const DraggableAlbum: React.FC<DraggableAlbumProps> = ({ album, index, moveAlbum
       data-handler-id={handlerId}
     >
       <div className="absolute inset-0 bg-zinc-100 dark:bg-zinc-800 rounded-md overflow-hidden border border-dashed border-zinc-300 dark:border-zinc-700">
-        {album.coverImageUrl ? (
+        {primaryImageUrl ? (
           <Image
-            src={album.coverImageUrl}
+            src={primaryImageUrl}
             alt={album.title}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -162,16 +165,16 @@ export function ShareCollectionModal({
 
           {/* 그리드 크기 선택 UI */}
           <div className="mb-4 flex items-center gap-2">
-            <span className="text-sm font-medium">크기:</span>
+            <span className="text-sm font-medium">열 개수:</span>
             <Select key={gridSize} value={gridSize} onValueChange={setGridSize}>
               <SelectTrigger className="w-[100px]">
                 <SelectValue placeholder="선택" />
               </SelectTrigger>
               <SelectContent className="bg-white dark:bg-zinc-800">
-                <SelectItem value="3">3x3</SelectItem>
-                <SelectItem value="4">4x4</SelectItem>
-                <SelectItem value="5">5x5</SelectItem>
-                <SelectItem value="6">6x6</SelectItem>
+                <SelectItem value="3">3열</SelectItem>
+                <SelectItem value="4">4열</SelectItem>
+                <SelectItem value="5">5열</SelectItem>
+                <SelectItem value="6">6열</SelectItem>
               </SelectContent>
             </Select>
           </div>
