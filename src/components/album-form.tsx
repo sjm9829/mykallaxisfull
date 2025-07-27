@@ -64,6 +64,25 @@ export function AlbumForm({ onSubmit, onCancel, initialData, discogsToken }: Alb
   const [isThrottling, setIsThrottling] = React.useState(false);
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
+  // 키보드 이벤트 처리 - Discogs 모달이 열려있을 때는 이벤트 리스너를 등록하지 않음
+  React.useEffect(() => {
+    if (isModalOpen) {
+      // Discogs 모달이 열려있으면 키보드 이벤트 리스너를 등록하지 않음
+      return;
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        onCancel();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => document.removeEventListener('keydown', handleKeyDown, true);
+  }, [isModalOpen, onCancel]);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {

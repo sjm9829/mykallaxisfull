@@ -412,6 +412,21 @@ export default function CollectionClientPage() {
         setShowShareModal(true);
     }, []);
 
+    // 앨범 네비게이션 로직
+    const selectedAlbumIndex = selectedAlbum ? filteredAndSortedAlbums.findIndex(album => album.id === selectedAlbum.id) : -1;
+    
+    const handlePreviousAlbum = useCallback(() => {
+        if (selectedAlbumIndex > 0) {
+            setSelectedAlbum(filteredAndSortedAlbums[selectedAlbumIndex - 1]);
+        }
+    }, [selectedAlbumIndex, filteredAndSortedAlbums]);
+
+    const handleNextAlbum = useCallback(() => {
+        if (selectedAlbumIndex >= 0 && selectedAlbumIndex < filteredAndSortedAlbums.length - 1) {
+            setSelectedAlbum(filteredAndSortedAlbums[selectedAlbumIndex + 1]);
+        }
+    }, [selectedAlbumIndex, filteredAndSortedAlbums]);
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-screen text-zinc-500 dark:text-zinc-400">
@@ -457,7 +472,13 @@ export default function CollectionClientPage() {
                     <div className="flex justify-between items-center mb-6">
                         <div className="flex flex-col">
                             <h1 className="text-2xl font-bold">{fileName.replace(".json", "")}</h1>
-                            <p className="text-lg font-normal text-zinc-500 dark:text-zinc-400 -mt-1">@{username}</p>
+                            <div className="flex items-center gap-2 -mt-1">
+                                <p className="text-lg font-normal text-zinc-500 dark:text-zinc-400">@{username}</p>
+                                <span className="text-zinc-400 dark:text-zinc-500">•</span>
+                                <p className="text-lg font-normal text-zinc-500 dark:text-zinc-400">
+                                    총 {filteredAndSortedAlbums.length}장의 음반
+                                </p>
+                            </div>
                         </div>
                         <div className="flex gap-2">
                             <Button
@@ -550,6 +571,17 @@ export default function CollectionClientPage() {
                         </div>
                     </div>
 
+                    {/* 필터링된 결과 개수 표시 */}
+                    {(searchTerm || filterType !== 'all') && (
+                        <div className="mb-4">
+                            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                                {filteredAndSortedAlbums.length}개의 음반이 검색되었습니다
+                                {searchTerm && ` (검색어: "${searchTerm}")`}
+                                {filteredAndSortedAlbums.length !== albums.length && ` / 전체 ${albums.length}장`}
+                            </p>
+                        </div>
+                    )}
+
                     {filteredAndSortedAlbums.length > 0 ? (
                         <AlbumGrid
             albums={filteredAndSortedAlbums}
@@ -594,6 +626,10 @@ export default function CollectionClientPage() {
                         onClose={() => setSelectedAlbum(null)}
                         onEdit={handleEditAlbum}
                         onDelete={handleDeleteAlbum}
+                        onPrevious={selectedAlbumIndex > 0 ? handlePreviousAlbum : undefined}
+                        onNext={selectedAlbumIndex >= 0 && selectedAlbumIndex < filteredAndSortedAlbums.length - 1 ? handleNextAlbum : undefined}
+                        currentIndex={selectedAlbumIndex >= 0 ? selectedAlbumIndex : undefined}
+                        totalCount={filteredAndSortedAlbums.length}
                     />
                 )}
 

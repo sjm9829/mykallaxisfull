@@ -10,6 +10,10 @@ interface AlbumDetailModalProps {
   onClose: () => void;
   onEdit: (album: Album) => void;
   onDelete: (album: Album) => void;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  currentIndex?: number;
+  totalCount?: number;
 }
 
 const DetailItem = ({ label, value }: { label: string; value?: string | number | null }) => {
@@ -22,12 +26,44 @@ const DetailItem = ({ label, value }: { label: string; value?: string | number |
   );
 };
 
-export function AlbumDetailModal({ album, onClose, onEdit, onDelete }: AlbumDetailModalProps) {
+export function AlbumDetailModal({ 
+  album, 
+  onClose, 
+  onEdit, 
+  onDelete, 
+  onPrevious, 
+  onNext, 
+  currentIndex, 
+  totalCount 
+}: AlbumDetailModalProps) {
   const modalRef = useModalAccessibility(onClose);
   const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
   
   const allImages = getAllImages(album);
   const price = album.priceAmount ? `${album.priceAmount.toLocaleString()} ${album.priceCurrency}` : null;
+
+  // 키보드 이벤트 핸들러
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          if (onPrevious) onPrevious();
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          if (onNext) onNext();
+          break;
+        case 'Escape':
+          e.preventDefault();
+          onClose();
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onPrevious, onNext, onClose]);
 
   const nextImage = () => {
     if (allImages.length > 1) {
@@ -59,6 +95,29 @@ export function AlbumDetailModal({ album, onClose, onEdit, onDelete }: AlbumDeta
         >
           <X className="w-6 h-6" />
         </button>
+
+        {/* 앨범 네비게이션 버튼들 - 좌중단/우중단으로 이동 */}
+        {onPrevious && (
+          <button
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-full p-2 shadow-md hover:shadow-lg z-10"
+            onClick={onPrevious}
+            aria-label="이전 앨범"
+            title="이전 앨범 (←)"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+        )}
+
+        {onNext && (
+          <button
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-full p-2 shadow-md hover:shadow-lg z-10"
+            onClick={onNext}
+            aria-label="다음 앨범"
+            title="다음 앨범 (→)"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        )}
 
         <div className="flex flex-col md:flex-row items-start gap-6">
           <div className="w-full md:w-48 flex-shrink-0 text-center">
@@ -174,7 +233,13 @@ export function AlbumDetailModal({ album, onClose, onEdit, onDelete }: AlbumDeta
           </div>
         </div>
 
-        <div className="flex gap-2 justify-end w-full mt-6 border-t pt-4">
+        <div className="flex gap-2 justify-end w-full mt-6 border-t pt-4 relative">
+          {/* 앨범 인덱스 표시 - 하단 중앙으로 이동 */}
+          {currentIndex !== undefined && totalCount !== undefined && totalCount > 1 && (
+            <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-700">
+              {currentIndex + 1} / {totalCount}
+            </div>
+          )}
           <button className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" onClick={() => onEdit(album)}>수정</button>
           <button className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700" onClick={() => onDelete(album)}>삭제</button>
         </div>
