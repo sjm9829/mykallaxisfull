@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import type { Album, AlbumType, Currency } from '@/types/album';
+import { getPrimaryCoverImage } from '@/lib/album-images';
 
 // Helper to convert boolean to string for export
 const boolToString = (val: boolean | undefined) => val ? 'TRUE' : 'FALSE';
@@ -16,7 +17,7 @@ export const exportToExcel = (albums: Album[]): Blob => {
     '스타일': album.style || '',
     '레이블': album.label || '',
     '카탈로그 넘버': album.catalogNo || '',
-    '커버 이미지 URL': album.coverImageUrl || '',
+    '커버 이미지 URL': getPrimaryCoverImage(album) || '', // 메인 커버 이미지만 저장
     '설명': album.description || '',
     '즐겨찾기': boolToString(album.isFavorite), // Convert boolean to string
     '가격': album.priceAmount || '',

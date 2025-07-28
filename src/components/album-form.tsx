@@ -306,11 +306,11 @@ export function AlbumForm({ onSubmit, onCancel, initialData, discogsToken }: Alb
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-1" htmlFor="artist">아티스트 *</label>
-              <input id="artist" name="artist" value={formData.artist} onChange={handleChange} required className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: Jarreau" />
+              <input id="artist" name="artist" value={formData.artist} onChange={handleChange} required className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: Chet Baker" />
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-1" htmlFor="title">타이틀 *</label>
-              <input id="title" name="title" value={formData.title} onChange={handleChange} required className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: Jarreau" />
+              <input id="title" name="title" value={formData.title} onChange={handleChange} required className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: Chet Baker Sings" />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1" htmlFor="type">유형</label>
@@ -323,27 +323,27 @@ export function AlbumForm({ onSubmit, onCancel, initialData, discogsToken }: Alb
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-1" htmlFor="format">형식</label>
-              <input id="format" name="format" value={formData.format} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: LP, Album" />
+              <input id="format" name="format" value={formData.format} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: LP, Album, Reissue" />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1" htmlFor="country">제조국</label>
-              <input id="country" name="country" value={formData.country} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: US" />
+              <input id="country" name="country" value={formData.country} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: US, France" />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1" htmlFor="releaseDate">발매일</label>
-              <input id="releaseDate" name="releaseDate" value={formData.releaseDate} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: 1983-01-01, 1983, 미상" />
+              <input id="releaseDate" name="releaseDate" value={formData.releaseDate} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: 2011-01-01, 2011, 미상" />
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-1" htmlFor="style">스타일</label>
-              <input id="style" name="style" value={formData.style} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: Soul-Jazz, Downtempo" />
+              <input id="style" name="style" value={formData.style} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: Contemporary Jazz, Cool Jazz" />
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-1" htmlFor="label">레이블</label>
-              <input id="label" name="label" value={formData.label} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: Warner Bros. Records" />
+              <input id="label" name="label" value={formData.label} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: Pacific Jazz" />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1" htmlFor="catalogNo">카탈로그 넘버</label>
-              <input id="catalogNo" name="catalogNo" value={formData.catalogNo} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: 1-23801" />
+              <input id="catalogNo" name="catalogNo" value={formData.catalogNo} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: PJ-1222" />
             </div>
             
             {/* 다중 이미지 관리 섹션 */}

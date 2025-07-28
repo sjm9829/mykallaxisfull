@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { AlbumGrid } from "@/components/album-grid";
 import { AlbumForm } from "@/components/album-form";
 import { AlbumDetailModal } from "@/components/album-detail-modal";
@@ -9,8 +9,8 @@ import type { Album, AlbumType } from "@/types/album";
 import { saveFile, verifyPermission } from '@/lib/file-system';
 import { getCollectionMetadata, setCollectionMetadata, getFileHandleFromUser, getActiveFileHandle } from '@/lib/db';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { exportToExcel, importFromExcel } from '@/services/excel';
-import { Plus, Settings, Search, ArrowUp, ArrowDown, Share2 } from 'lucide-react';
+
+import { Plus, Settings, Search, ArrowUp, ArrowDown, Share2, Cloud, FileSpreadsheet } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,8 +24,13 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DiscogsTokenSettings } from "@/components/discogs-token-settings";
 import { encryptData, decryptData } from '@/lib/crypto';
-import { exportAlbumsAsImage } from '@/lib/image-export';
+
 import { ShareCollectionModal } from '@/components/share-collection-modal';
+import { LoadFromGistModal } from '@/components/load-from-gist-modal';
+import { CloudSyncModal } from '@/components/cloud-sync-modal';
+import { ExcelSyncModal } from '@/components/excel-sync-modal';
+
+import type { CollectionData } from '@/services/gist';
 
 export default function CollectionClientPage() {
     const [albums, setAlbums] = useState<Album[]>([]);
@@ -39,10 +44,12 @@ export default function CollectionClientPage() {
     const [deleteTarget, setDeleteTarget] = useState<Album | null>(null);
     const [editingAlbum, setEditingAlbum] = useState<Album | null>(null);
     const [hasPermission, setHasPermission] = useState(false);
-    const [showImportConfirm, setShowImportConfirm] = useState(false);
-    const [importedAlbums, setImportedAlbums] = useState<Partial<Album>[] | null>(null);
     const [showDiscogsTokenSettings, setShowDiscogsTokenSettings] = useState(false); // Discogs 토큰 설정 모달 상태
     const [showShareModal, setShowShareModal] = useState(false); // 공유 모달 상태
+    const [showLoadFromGistModal, setShowLoadFromGistModal] = useState(false); // Gist 로드 모달 상태
+    const [showCloudSyncModal, setShowCloudSyncModal] = useState(false); // 클라우드 동기화 모달 상태
+    const [showExcelSyncModal, setShowExcelSyncModal] = useState(false); // 엑셀 동기화 모달 상태
+
 
     // 필터, 정렬, 검색 상태
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,7 +59,7 @@ export default function CollectionClientPage() {
 
     const router = useRouter();
     const searchParams = useSearchParams();
-    const fileInputRef = useRef<HTMLInputElement>(null);
+
 
     const formModalRef = useModalAccessibility(() => { setShowForm(false); setEditingAlbum(null); });
     const discogsSettingsModalRef = useModalAccessibility(() => { setShowDiscogsTokenSettings(false); });
@@ -261,86 +268,28 @@ export default function CollectionClientPage() {
         setDeleteTarget(null);
     };
 
-    const handleExportExcel = useCallback(() => {
-        try {
-            const blob = exportToExcel(albums);
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `${fileName.replace('.json', '') || 'collection'}-backup.xlsx`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            toast.success("엑셀 파일로 내보내기 성공!");
-        } catch (error) {
-            console.error("Error exporting to Excel:", error);
-            toast.error("엑셀 파일 내보내기 실패.");
-        }
-    }, [albums, fileName]);
-
-    const handleImportExcel = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-            toast.info(`파일 감지됨: ${file.name}`);
-            
-            importFromExcel(file)
-                .then(data => {
-                    setImportedAlbums(data);
-                    setShowImportConfirm(true);
-                })
-                .catch(error => {
-                    console.error("Error importing from Excel:", error);
-                    toast.error("엑셀 파일 가져오기 실패.");
-                })
-                .finally(() => {
-                    if (fileInputRef.current) {
-                        fileInputRef.current.value = '';
-                    }
-                });
-        } else {
-            toast.error("선택된 파일이 없습니다.");
-        }
+    const handleShareCollection = useCallback(() => {
+        setShowShareModal(true);
     }, []);
 
-    const confirmImport = useCallback(() => {
-        if (importedAlbums) {
-            const newAlbums: Album[] = importedAlbums.map(importedAlbum => ({
-                id: (Math.random() + Date.now()).toString(),
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                coverImageUrl: importedAlbum.coverImageUrl,
-                artist: importedAlbum.artist || '',
-                title: importedAlbum.title || '',
-                type: importedAlbum.type || 'Other',
-                format: importedAlbum.format,
-                country: importedAlbum.country,
-                releaseDate: importedAlbum.releaseDate,
-                style: importedAlbum.style,
-                label: importedAlbum.label,
-                catalogNo: importedAlbum.catalogNo,
-                description: importedAlbum.description,
-                isFavorite: importedAlbum.isFavorite || false,
-                priceAmount: importedAlbum.priceAmount,
-                priceCurrency: importedAlbum.priceCurrency,
-                purchaseStore: importedAlbum.purchaseStore,
-                purchaseDate: importedAlbum.purchaseDate,
-            }));
-
-            setAlbums(newAlbums);
-            saveAlbumsToFile(newAlbums, discogsToken);
-            setShowImportConfirm(false);
-            setImportedAlbums(null);
-            toast.success("엑셀 파일에서 컬렉션을 성공적으로 가져왔습니다!");
-        }
-    }, [importedAlbums, saveAlbumsToFile, discogsToken]);
-
-    const cancelImport = useCallback(() => {
-        setShowImportConfirm(false);
-        setImportedAlbums(null);
+    const handleLoadFromGist = useCallback((data: CollectionData) => {
+        setAlbums(data.albums);
+        setUsername(data._metadata.username);
+        setFileName(`${data._metadata.collectionName}.json`);
+        toast.success(`${data._metadata.collectionName} 컬렉션을 불러왔습니다! (${data.albums.length}개 앨범)`);
     }, []);
 
-    
+    const handleLoadFromCloudSync = useCallback((newAlbums: Album[]) => {
+        setAlbums(newAlbums);
+        saveAlbumsToFile(newAlbums, discogsToken);
+        // CloudSyncModal에서 이미 정확한 토스트 메시지를 보냄
+    }, [saveAlbumsToFile, discogsToken]);
+
+    const handleLoadFromExcelSync = useCallback((newAlbums: Album[]) => {
+        setAlbums(newAlbums);
+        saveAlbumsToFile(newAlbums, discogsToken);
+        // ExcelSyncModal에서 정확한 토스트 메시지를 보냄
+    }, [saveAlbumsToFile, discogsToken]);
 
     const handleAlbumClick = (album: Album) => {
         setSelectedAlbum(album);
@@ -408,10 +357,6 @@ export default function CollectionClientPage() {
         return filtered;
     }, [albums, searchTerm, filterType, sortKey, sortOrder]);
 
-    const handleShareCollection = useCallback(() => {
-        setShowShareModal(true);
-    }, []);
-
     // 앨범 네비게이션 로직
     const selectedAlbumIndex = selectedAlbum ? filteredAndSortedAlbums.findIndex(album => album.id === selectedAlbum.id) : -1;
     
@@ -460,13 +405,6 @@ export default function CollectionClientPage() {
 
     return (
         <>
-            <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleImportExcel}
-                accept=".xlsx, .xls"
-                style={{ display: 'none' }}
-            />
             <main className="flex min-h-screen flex-col items-center p-8 sm:p-16">
                 <div className="w-full max-w-6xl mt-8">
                     <div className="flex justify-between items-center mb-6">
@@ -501,13 +439,13 @@ export default function CollectionClientPage() {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="bg-white dark:bg-zinc-800 shadow-lg rounded-md border border-zinc-200 dark:border-zinc-800">
-                                    <DropdownMenuItem onClick={() => {
-                                        fileInputRef.current?.click();
-                                    }}>
-                                        엑셀 가져오기
+                                    <DropdownMenuItem onClick={() => setShowExcelSyncModal(true)}>
+                                        <FileSpreadsheet className="mr-2 h-4 w-4" />
+                                        엑셀 동기화
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={handleExportExcel}>
-                                        엑셀 내보내기
+                                    <DropdownMenuItem onClick={() => setShowCloudSyncModal(true)}>
+                                        <Cloud className="mr-2 h-4 w-4" />
+                                        클라우드 동기화
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setShowDiscogsTokenSettings(true)}>
                                         Discogs 토큰 설정
@@ -641,14 +579,6 @@ export default function CollectionClientPage() {
                     />
                 )}
 
-                {showImportConfirm && importedAlbums && (
-                    <ConfirmationModal
-                        message="엑셀 파일의 데이터로 현재 컬렉션을 덮어쓰시겠습니까? 기존 데이터는 사라질 수 있습니다."
-                        onConfirm={confirmImport}
-                        onCancel={cancelImport}
-                    />
-                )}
-
                 {showDiscogsTokenSettings && (
                     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-fadein">
                         <div
@@ -672,6 +602,31 @@ export default function CollectionClientPage() {
                         albums={albums}
                         onClose={() => setShowShareModal(false)}
                         fileName={fileName}
+                    />
+                )}
+
+                {showLoadFromGistModal && (
+                    <LoadFromGistModal
+                        onClose={() => setShowLoadFromGistModal(false)}
+                        onLoad={handleLoadFromGist}
+                    />
+                )}
+
+                {showCloudSyncModal && (
+                    <CloudSyncModal
+                        albums={albums}
+                        onClose={() => setShowCloudSyncModal(false)}
+                        onLoadAlbums={handleLoadFromCloudSync}
+                        collectionName={fileName.replace('.json', '') || 'My Collection'}
+                    />
+                )}
+
+                {showExcelSyncModal && (
+                    <ExcelSyncModal
+                        albums={albums}
+                        onClose={() => setShowExcelSyncModal(false)}
+                        onLoadAlbums={handleLoadFromExcelSync}
+                        collectionName={fileName.replace('.json', '') || 'My Collection'}
                     />
                 )}
 
