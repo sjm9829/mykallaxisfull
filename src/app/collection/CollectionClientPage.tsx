@@ -10,7 +10,7 @@ import { saveFile, verifyPermission } from '@/lib/file-system';
 import { getCollectionMetadata, setCollectionMetadata, getFileHandleFromUser, getActiveFileHandle } from '@/lib/db';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { Plus, Settings, Search, ArrowUp, ArrowDown, Share2, Cloud, FileSpreadsheet } from 'lucide-react';
+import { Plus, Settings, Search, ArrowUp, ArrowDown, Share2, Cloud, FileSpreadsheet, LogOut } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -448,10 +448,12 @@ export default function CollectionClientPage() {
                                         클라우드 동기화
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setShowDiscogsTokenSettings(true)}>
+                                        <Settings className="mr-2 h-4 w-4" />
                                         Discogs 토큰 설정
                                     </DropdownMenuItem>
                                     
                                 <DropdownMenuItem onClick={() => router.push('/')}>
+                                        <LogOut className="mr-2 h-4 w-4" />
                                         나가기
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
