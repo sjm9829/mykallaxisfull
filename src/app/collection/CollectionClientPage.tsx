@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { useModalAccessibility } from "@/lib/useModalAccessibility";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DiscogsTokenSettings } from "@/components/discogs-token-settings";
 import { encryptData, decryptData } from '@/lib/crypto';
 
@@ -29,6 +30,8 @@ import { ShareCollectionModal } from '@/components/share-collection-modal';
 import { LoadFromGistModal } from '@/components/load-from-gist-modal';
 import { CloudSyncModal } from '@/components/cloud-sync-modal';
 import { ExcelSyncModal } from '@/components/excel-sync-modal';
+import { HelpModal } from '@/components/help-modal';
+import { EmptyStateGuidance } from '@/components/empty-state-guidance';
 
 import type { CollectionData } from '@/services/gist';
 
@@ -49,6 +52,7 @@ export default function CollectionClientPage() {
     const [showLoadFromGistModal, setShowLoadFromGistModal] = useState(false); // Gist 로드 모달 상태
     const [showCloudSyncModal, setShowCloudSyncModal] = useState(false); // 클라우드 동기화 모달 상태
     const [showExcelSyncModal, setShowExcelSyncModal] = useState(false); // 엑셀 동기화 모달 상태
+    const [showHelpModal, setShowHelpModal] = useState(false); // 도움말 모달 상태
 
 
     // 필터, 정렬, 검색 상태
@@ -404,7 +408,7 @@ export default function CollectionClientPage() {
     }
 
     return (
-        <>
+        <TooltipProvider>
             <main className="flex min-h-screen flex-col items-center p-8 sm:p-16">
                 <div className="w-full max-w-6xl mt-8">
                     <div className="flex justify-between items-center mb-6">
@@ -419,25 +423,57 @@ export default function CollectionClientPage() {
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <Button
-                                variant="default"
-                                size="icon"
-                                onClick={handleShareCollection}
-                                className="h-9 w-9 rounded-full bg-blue-600 text-white hover:bg-blue-700"
-                            >
-                                <Share2 className="h-5 w-5" />
-                                <span className="sr-only">컬렉션 공유</span>
-                            </Button>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
                                     <Button
                                         variant="default"
                                         size="icon"
-                                        className="h-9 w-9 rounded-full bg-zinc-700 text-white hover:bg-zinc-800"
+                                        onClick={handleShareCollection}
+                                        className="h-9 w-9 rounded-full bg-blue-600 text-white hover:bg-blue-700"
                                     >
-                                        <Settings className="h-5 w-5" />
+                                        <Share2 className="h-5 w-5" />
+                                        <span className="sr-only">컬렉션 공유</span>
                                     </Button>
-                                </DropdownMenuTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>컬렉션을 이미지로 공유합니다</p>
+                                </TooltipContent>
+                            </Tooltip>
+                            {/* 도움말 버튼 - 추후 활성화 예정
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="default"
+                                        size="icon"
+                                        onClick={() => setShowHelpModal(true)}
+                                        className="h-9 w-9 rounded-full bg-green-600 text-white hover:bg-green-700"
+                                    >
+                                        <HelpCircle className="h-5 w-5" />
+                                        <span className="sr-only">도움말</span>
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>사용자 가이드 및 도움말</p>
+                                </TooltipContent>
+                            </Tooltip>
+                            */}
+                            <DropdownMenu>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="default"
+                                                size="icon"
+                                                className="h-9 w-9 rounded-full bg-zinc-700 text-white hover:bg-zinc-800"
+                                            >
+                                                <Settings className="h-5 w-5" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>환경설정 및 동기화 옵션</p>
+                                    </TooltipContent>
+                                </Tooltip>
                                 <DropdownMenuContent align="end" className="bg-white dark:bg-zinc-800 shadow-lg rounded-md border border-zinc-200 dark:border-zinc-800">
                                     <DropdownMenuItem onClick={() => setShowExcelSyncModal(true)}>
                                         <FileSpreadsheet className="mr-2 h-4 w-4" />
@@ -489,26 +525,40 @@ export default function CollectionClientPage() {
                             </SelectContent>
                         </Select>
 
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                            className="h-[36px] w-[36px] flex-shrink-0 border border-zinc-200 dark:border-zinc-800"
-                        >
-                            {sortOrder === 'asc' ? <ArrowUp className="h-5 w-5" /> : <ArrowDown className="h-5 w-5" />}
-                            <span className="sr-only">정렬 순서 변경</span>
-                        </Button>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                                    className="h-[36px] w-[36px] flex-shrink-0 border border-zinc-200 dark:border-zinc-800"
+                                >
+                                    {sortOrder === 'asc' ? <ArrowUp className="h-5 w-5" /> : <ArrowDown className="h-5 w-5" />}
+                                    <span className="sr-only">정렬 순서 변경</span>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>정렬 순서를 {sortOrder === 'asc' ? '내림차순' : '오름차순'}으로 변경</p>
+                            </TooltipContent>
+                        </Tooltip>
 
-                        <div className="relative ml-auto">
-                            <Input
-                                type="text"
-                                placeholder="앨범 검색 (제목, 아티스트, 레이블)"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 pr-4 py-2 w-[300px] border border-zinc-200 dark:border-zinc-800"
-                            />
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-500" />
-                        </div>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <div className="relative ml-auto">
+                                    <Input
+                                        type="text"
+                                        placeholder="앨범 검색 (제목, 아티스트, 레이블)"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="pl-10 pr-4 py-2 w-[300px] border border-zinc-200 dark:border-zinc-800"
+                                    />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-500" />
+                                </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>제목, 아티스트, 레이블로 앨범을 검색할 수 있습니다</p>
+                            </TooltipContent>
+                        </Tooltip>
                     </div>
 
                     {/* 필터링된 결과 개수 표시 */}
@@ -529,7 +579,15 @@ export default function CollectionClientPage() {
             onEditAlbum={handleEditAlbum}
             onDeleteAlbum={handleDeleteClick}
           />
+                    ) : albums.length === 0 ? (
+                        // 컬렉션이 완전히 비어있을 때 - Empty State Guidance 표시
+                        <EmptyStateGuidance
+                            onAddFirstAlbum={() => setShowForm(true)}
+                            onOpenExcelSync={() => setShowExcelSyncModal(true)}
+                            onOpenCloudSync={() => setShowCloudSyncModal(true)}
+                        />
                     ) : (
+                        // 검색 결과가 없을 때만 기존 메시지 표시
                         <div className="flex flex-col items-center justify-center h-64 text-zinc-500 dark:text-zinc-400">
                             <p className="text-lg mb-4">검색 결과가 없습니다.</p>
                         </div>
@@ -632,18 +690,31 @@ export default function CollectionClientPage() {
                     />
                 )}
 
+                {showHelpModal && (
+                    <HelpModal
+                        onClose={() => setShowHelpModal(false)}
+                    />
+                )}
+
                 
             </main>
 
-            <Button
-                variant="default"
-                size="icon"
-                onClick={() => setShowForm(true)}
-                className="fixed bottom-4 right-4 h-14 w-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 z-50"
-            >
-                <Plus className="h-7 w-7" />
-                <span className="sr-only">앨범 추가</span>
-            </Button>
-        </>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        variant="default"
+                        size="icon"
+                        onClick={() => setShowForm(true)}
+                        className="fixed bottom-4 right-4 h-14 w-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 z-50"
+                    >
+                        <Plus className="h-7 w-7" />
+                        <span className="sr-only">앨범 추가</span>
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                    <p>새 앨범을 컬렉션에 추가합니다</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
     );
 }
