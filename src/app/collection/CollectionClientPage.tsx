@@ -479,7 +479,6 @@ export default function CollectionClientPage() {
                                 </p>
                                 {priceSummary.totalWithPrice > 0 && (
                                     <>
-                                        <span className="text-zinc-400 dark:text-zinc-500">•</span>
                                         <button
                                             onClick={() => setShowPriceSummaryModal(true)}
                                             className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors"

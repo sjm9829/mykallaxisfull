@@ -20,3 +20,11 @@
 [[edge_functions]]
   path = "/api/discogs/release/*"
   function = "discogs-release"
+
+[[edge_functions]]
+  path = "/api/gist"
+  function = "gist-save"
+
+[[edge_functions]]
+  path = "/api/gist/load"
+  function = "gist-load"
