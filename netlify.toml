@@ -28,3 +28,7 @@
 [[edge_functions]]
   path = "/api/gist/load"
   function = "gist-load"
+
+[[edge_functions]]
+  path = "/api/image-proxy"
+  function = "image-proxy"
