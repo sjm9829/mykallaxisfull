@@ -8,13 +8,8 @@ export async function exportAlbumsAsImage(albums: Album[], filename: string = "c
     return;
   }
 
-  console.log("🔍 Export Debug Info:");
-  console.log("Total albums:", albums.length);
-  console.log("Albums data:", albums.map(a => ({ id: a.id, title: a.title, artist: a.artist })));
-
   // 각 앨범의 커버 이미지 URL을 추출 (중복 제거)
   const albumCovers = albums.map(album => getPrimaryCoverImage(album)).filter((url): url is string => !!url);
-  console.log("Album covers (before dedup):", albumCovers.length, albumCovers);
 
   if (albumCovers.length === 0) {
     alert("앨범 커버 이미지가 없습니다.");
@@ -23,7 +18,6 @@ export async function exportAlbumsAsImage(albums: Album[], filename: string = "c
 
   // 중복된 URL 제거 (같은 앨범이 여러 번 추가된 경우 방지)
   const uniqueAlbumCovers = Array.from(new Set(albumCovers));
-  console.log("Album covers (after dedup):", uniqueAlbumCovers.length, uniqueAlbumCovers);
 
   // 고정 설정값
   const FIXED_WIDTH = 900; // 고정 용지 너비
