@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import { Workbook } from 'exceljs';
 import type { Album, AlbumType, Currency } from '@/types/album';
 import { getPrimaryCoverImage } from '@/lib/album-images';
 
@@ -6,100 +6,122 @@ import { getPrimaryCoverImage } from '@/lib/album-images';
 const boolToString = (val: boolean | undefined) => val ? 'TRUE' : 'FALSE';
 
 // 앨범 데이터를 엑셀 파일(Blob)로 변환
-export const exportToExcel = (albums: Album[]): Blob => {
-  const dataToExport = albums.map(album => ({
-    '아티스트': album.artist,
-    '타이틀': album.title,
-    '유형': album.type,
-    '형식': album.format || '',
-    '제조국': album.country || '',
-    '발매일': album.releaseDate || '',
-    '스타일': album.style || '',
-    '레이블': album.label || '',
-    '카탈로그 넘버': album.catalogNo || '',
-    '커버 이미지 URL': getPrimaryCoverImage(album) || '', // 메인 커버 이미지만 저장
-    '설명': album.description || '',
-    '즐겨찾기': boolToString(album.isFavorite), // Convert boolean to string
-    '가격': album.priceAmount || '',
-    '통화': album.priceCurrency || '',
-    '구입처': album.purchaseStore || '',
-    '구매일': album.purchaseDate || '',
-    '생성일': album.createdAt,
-    '수정일': album.updatedAt,
-  }));
+export const exportToExcel = async (albums: Album[]): Promise<Blob> => {
+  const workbook = new Workbook();
+  const worksheet = workbook.addWorksheet('Albums');
 
-  const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Albums');
+  // 헤더 설정
+  worksheet.columns = [
+    { header: '아티스트', key: 'artist', width: 20 },
+    { header: '타이틀', key: 'title', width: 30 },
+    { header: '유형', key: 'type', width: 15 },
+    { header: '형식', key: 'format', width: 15 },
+    { header: '제조국', key: 'country', width: 15 },
+    { header: '발매일', key: 'releaseDate', width: 15 },
+    { header: '스타일', key: 'style', width: 20 },
+    { header: '레이블', key: 'label', width: 20 },
+    { header: '카탈로그 넘버', key: 'catalogNo', width: 20 },
+    { header: '커버 이미지 URL', key: 'coverImageUrl', width: 50 },
+    { header: '설명', key: 'description', width: 30 },
+    { header: '즐겨찾기', key: 'isFavorite', width: 15 },
+    { header: '가격', key: 'priceAmount', width: 15 },
+    { header: '통화', key: 'priceCurrency', width: 10 },
+    { header: '구입처', key: 'purchaseStore', width: 20 },
+    { header: '구매일', key: 'purchaseDate', width: 15 },
+    { header: '생성일', key: 'createdAt', width: 20 },
+    { header: '수정일', key: 'updatedAt', width: 20 },
+  ];
 
-  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-  return new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  // 데이터 추가
+  albums.forEach(album => {
+    worksheet.addRow({
+      artist: album.artist,
+      title: album.title,
+      type: album.type,
+      format: album.format || '',
+      country: album.country || '',
+      releaseDate: album.releaseDate || '',
+      style: album.style || '',
+      label: album.label || '',
+      catalogNo: album.catalogNo || '',
+      coverImageUrl: getPrimaryCoverImage(album) || '',
+      description: album.description || '',
+      isFavorite: boolToString(album.isFavorite),
+      priceAmount: album.priceAmount || '',
+      priceCurrency: album.priceCurrency || '',
+      purchaseStore: album.purchaseStore || '',
+      purchaseDate: album.purchaseDate || '',
+      createdAt: album.createdAt,
+      updatedAt: album.updatedAt,
+    });
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  return new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 };
 
 // 엑셀 파일(File)을 앨범 데이터로 변환
-export const importFromExcel = (file: File): Promise<Partial<Album>[]> => {
+export const importFromExcel = async (file: File): Promise<Partial<Album>[]> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
-        const data = event.target?.result;
-        if (!data) {
+        const buffer = event.target?.result as ArrayBuffer;
+        if (!buffer) {
           reject(new Error("파일을 읽을 수 없습니다."));
           return;
         }
-        const workbook = XLSX.read(data, { type: 'binary' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        interface ExcelRow {
-  '아티스트'?: string;
-  '타이틀'?: string;
-  '유형'?: string;
-  '형식'?: string;
-  '제조국'?: string;
-  '발매일'?: string;
-  '스타일'?: string;
-  '레이블'?: string;
-  '카탈로그 넘버'?: string;
-  '커버 이미지 URL'?: string;
-  '설명'?: string;
-  '즐겨찾기'?: string;
-  '가격'?: number;
-  '통화'?: string;
-  '구입처'?: string;
-  '구매일'?: string;
-  '생성일'?: string;
-  '수정일'?: string;
-}
 
-// ...
+        const workbook = new Workbook();
+        await workbook.xlsx.load(buffer);
+        
+        const worksheet = workbook.getWorksheet(1); // 첫 번째 워크시트 가져오기
+        if (!worksheet) {
+          reject(new Error("워크시트를 찾을 수 없습니다."));
+          return;
+        }
 
-        const json = XLSX.utils.sheet_to_json(worksheet) as ExcelRow[];
-
+        const albums: Partial<Album>[] = [];
+        
         // Helper to convert string to boolean for import
         const stringToBool = (val: string | undefined) => val?.toUpperCase() === 'TRUE';
 
-        const albums: Partial<Album>[] = json.map(row => ({
-          // id는 가져오기 시 새로 생성하므로 여기서는 파싱하지 않음
-          createdAt: row['생성일'] ? String(row['생성일']) : undefined,
-          updatedAt: row['수정일'] ? String(row['수정일']) : undefined,
-          coverImageUrl: row['커버 이미지 URL'] ? String(row['커버 이미지 URL']) : undefined,
-          artist: String(row['아티스트'] || ''),
-          title: String(row['타이틀'] || ''),
-          type: (row['유형'] || 'Other') as AlbumType, // Default to 'Other' if type is missing
-          format: row['형식'] ? String(row['형식']) : undefined,
-          country: row['제조국'] ? String(row['제조국']) : undefined,
-          releaseDate: row['발매일'] ? String(row['발매일']) : undefined,
-          style: row['스타일'] ? String(row['스타일']) : undefined,
-          label: row['레이블'] ? String(row['레이블']) : undefined,
-          catalogNo: row['카탈로그 넘버'] ? String(row['카탈로그 넘버']) : undefined,
-          description: row['설명'] ? String(row['설명']) : undefined,
-          isFavorite: stringToBool(row['즐겨찾기']), // Convert string to boolean
-          priceAmount: row['가격'] ? Number(row['가격']) : undefined,
-          priceCurrency: (row['통화'] || undefined) as Currency | undefined,
-          purchaseStore: row['구입처'] ? String(row['구입처']) : undefined,
-          purchaseDate: row['구매일'] ? String(row['구매일']) : undefined,
-        }));
+        worksheet.eachRow((row, rowNumber) => {
+          if (rowNumber === 1) return; // 헤더 행 건너뛰기
+          
+          const rowData = row.values as (string | number | undefined)[];
+          if (!rowData || rowData.length < 2) return; // 빈 행 건너뛰기
+
+          // 고유한 ID와 타임스탬프 생성
+          const now = new Date();
+          const uniqueId = `${now.getTime()}_${rowNumber}_${Math.random().toString(36).substr(2, 9)}`;
+          const uniqueTimestamp = new Date(now.getTime() + (rowNumber - 2)).toISOString(); // 각 행마다 1ms씩 차이
+
+          const album: Partial<Album> = {
+            id: uniqueId,
+            artist: String(rowData[1] || ''),
+            title: String(rowData[2] || ''),
+            type: (rowData[3] || 'Other') as AlbumType,
+            format: rowData[4] ? String(rowData[4]) : undefined,
+            country: rowData[5] ? String(rowData[5]) : undefined,
+            releaseDate: rowData[6] ? String(rowData[6]) : undefined,
+            style: rowData[7] ? String(rowData[7]) : undefined,
+            label: rowData[8] ? String(rowData[8]) : undefined,
+            catalogNo: rowData[9] ? String(rowData[9]) : undefined,
+            coverImageUrl: rowData[10] ? String(rowData[10]) : undefined,
+            description: rowData[11] ? String(rowData[11]) : undefined,
+            isFavorite: stringToBool(String(rowData[12] || '')),
+            priceAmount: rowData[13] ? Number(rowData[13]) : undefined,
+            priceCurrency: (rowData[14] || undefined) as Currency | undefined,
+            purchaseStore: rowData[15] ? String(rowData[15]) : undefined,
+            purchaseDate: rowData[16] ? String(rowData[16]) : undefined,
+            createdAt: rowData[17] ? String(rowData[17]) : uniqueTimestamp,
+            updatedAt: rowData[18] ? String(rowData[18]) : uniqueTimestamp,
+          };
+
+          albums.push(album);
+        });
 
         resolve(albums);
       } catch (error) {
@@ -113,6 +135,6 @@ export const importFromExcel = (file: File): Promise<Partial<Album>[]> => {
       reject(new Error("파일을 읽는 중 오류가 발생했습니다."));
     };
 
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   });
 };

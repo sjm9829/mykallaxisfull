@@ -32,7 +32,7 @@ export function ExcelSyncModal({
 
     setIsExporting(true);
     try {
-      const blob = exportToExcel(albums);
+      const blob = await exportToExcel(albums);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -62,12 +62,12 @@ export function ExcelSyncModal({
     try {
       const importedAlbums = await importFromExcel(file);
       
-      // ID와 타임스탬프 추가
-      const albumsWithIds = importedAlbums.map(album => ({
+      // ID와 타임스탬프 추가 (없는 경우에만)
+      const albumsWithIds = importedAlbums.map((album, index) => ({
         ...album,
-        id: (Math.random() + Date.now()).toString(),
-        createdAt: album.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        id: album.id || `${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`,
+        createdAt: album.createdAt || new Date(Date.now() + index).toISOString(),
+        updatedAt: album.updatedAt || new Date(Date.now() + index).toISOString(),
         artist: album.artist || '',
         title: album.title || '',
         type: album.type || 'Other' as const,
