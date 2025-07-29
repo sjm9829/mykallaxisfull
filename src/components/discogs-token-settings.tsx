@@ -34,6 +34,8 @@ export function DiscogsTokenSettings({ onClose, discogsToken, onTokenChange }: D
 
     setIsVerifyingToken(true);
     try {
+      console.log('Sending token verification request...');
+      
       const response = await fetch('/api/discogs/verify-token', {
         method: 'POST',
         headers: {
@@ -42,18 +44,36 @@ export function DiscogsTokenSettings({ onClose, discogsToken, onTokenChange }: D
         body: JSON.stringify({ token: cleanToken }),
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+
+      if (!response.ok) {
+        console.error('HTTP error:', response.status, response.statusText);
+      }
+
       const result = await response.json();
+      console.log('Response data:', result);
 
       if (response.ok && result.valid) {
         await onTokenChange(cleanToken);
         toast.success("Discogs 개인 액세스 토큰이 유효하며 저장되었습니다.");
         onClose(); // 성공 시 모달 닫기
       } else {
-        toast.error(`토큰 유효성 검사 실패: ${result.error || 'Unknown error'}`);
+        const errorMessage = result.error || 'Unknown error';
+        console.error('Token validation failed:', errorMessage);
+        toast.error(`토큰 유효성 검사 실패: ${errorMessage}`);
       }
     } catch (error) {
       console.error("토큰 유효성 검사 중 오류 발생:", error);
-      toast.error("토큰 유효성 검사 중 네트워크 오류가 발생했습니다.");
+      
+      // 더 자세한 오류 정보 제공
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        toast.error("네트워크 연결을 확인해주세요. API 서버에 접근할 수 없습니다.");
+      } else if (error instanceof SyntaxError) {
+        toast.error("서버 응답 파싱 오류가 발생했습니다.");
+      } else {
+        toast.error(`토큰 유효성 검사 중 오류가 발생했습니다: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     } finally {
       setIsVerifyingToken(false);
     }
