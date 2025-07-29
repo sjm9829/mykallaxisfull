@@ -28,9 +28,10 @@ interface AlbumFormProps {
   onCancel: () => void;
   initialData?: Album;
   discogsToken?: string | null; // discogsToken prop 추가
+  existingStores?: string[]; // 기존 구입처 목록
 }
 
-export function AlbumForm({ onSubmit, onCancel, initialData, discogsToken }: AlbumFormProps) {
+export function AlbumForm({ onSubmit, onCancel, initialData, discogsToken, existingStores = [] }: AlbumFormProps) {
   const [formData, setFormData] = React.useState({
     artist: initialData?.artist || "",
     title: initialData?.title || "",
@@ -292,109 +293,135 @@ export function AlbumForm({ onSubmit, onCancel, initialData, discogsToken }: Alb
         </button>
 
         <div className="flex-grow overflow-y-auto p-6 pt-0"> {/* Scrollable content section */} 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2 font-bold text-lg border-b pb-2 mb-2 flex justify-between items-center">
-              <span>앨범 정보</span>
-              <button
-                type="button"
-                onClick={handleDiscogsSearch}
-                className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isFetchingReleaseDetails || isRateLimited} // Disable button while fetching details or rate-limited
-              >
-                {isFetchingReleaseDetails ? '정보 가져오는 중...' : isRateLimited ? 'API 제한됨 (잠시 후 재시도)' : 'Discogs 정보 가져오기'}
-              </button>
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1" htmlFor="artist">아티스트 *</label>
-              <input id="artist" name="artist" value={formData.artist} onChange={handleChange} required className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: Chet Baker" />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1" htmlFor="title">타이틀 *</label>
-              <input id="title" name="title" value={formData.title} onChange={handleChange} required className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: Chet Baker Sings" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="type">유형</label>
-              <select id="type" name="type" value={formData.type} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800">
-                <option value="Vinyl">Vinyl</option>
-                <option value="CD">CD</option>
-                <option value="Tape">Tape</option>
-                <option value="Other">기타</option>
-              </select>
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1" htmlFor="format">형식</label>
-              <input id="format" name="format" value={formData.format} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: LP, Album, Reissue" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="country">제조국</label>
-              <input id="country" name="country" value={formData.country} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: US, France" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="releaseDate">발매일</label>
-              <input id="releaseDate" name="releaseDate" value={formData.releaseDate} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: 2011-01-01, 2011, 미상" />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1" htmlFor="style">스타일</label>
-              <input id="style" name="style" value={formData.style} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: Contemporary Jazz, Cool Jazz" />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1" htmlFor="label">레이블</label>
-              <input id="label" name="label" value={formData.label} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: Pacific Jazz" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="catalogNo">카탈로그 넘버</label>
-              <input id="catalogNo" name="catalogNo" value={formData.catalogNo} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: PJ-1222" />
+          <div className="space-y-6">
+            {/* 앨범 정보 섹션 */}
+            <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-100 dark:border-zinc-800 p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">앨범 정보</h3>
+                <button
+                  type="button"
+                  onClick={handleDiscogsSearch}
+                  className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  disabled={isFetchingReleaseDetails || isRateLimited}
+                >
+                  {isFetchingReleaseDetails ? '정보 가져오는 중...' : isRateLimited ? 'API 제한됨' : 'Discogs 검색'}
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1.5 text-zinc-700 dark:text-zinc-300" htmlFor="artist">아티스트 *</label>
+                  <input id="artist" name="artist" value={formData.artist} onChange={handleChange} required className="w-full p-2.5 border rounded-md border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="예: Chet Baker" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1.5 text-zinc-700 dark:text-zinc-300" htmlFor="title">타이틀 *</label>
+                  <input id="title" name="title" value={formData.title} onChange={handleChange} required className="w-full p-2.5 border rounded-md border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="예: Chet Baker Sings" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 text-zinc-700 dark:text-zinc-300" htmlFor="type">유형</label>
+                  <select id="type" name="type" value={formData.type} onChange={handleChange} className="w-full p-2.5 border rounded-md border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    <option value="Vinyl">Vinyl</option>
+                    <option value="CD">CD</option>
+                    <option value="Tape">Tape</option>
+                    <option value="Other">기타</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 text-zinc-700 dark:text-zinc-300" htmlFor="format">형식</label>
+                  <input id="format" name="format" value={formData.format} onChange={handleChange} className="w-full p-2.5 border rounded-md border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="예: LP, Album, Reissue" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 text-zinc-700 dark:text-zinc-300" htmlFor="country">제조국</label>
+                  <input id="country" name="country" value={formData.country} onChange={handleChange} className="w-full p-2.5 border rounded-md border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="예: US, France" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 text-zinc-700 dark:text-zinc-300" htmlFor="releaseDate">발매일</label>
+                  <input id="releaseDate" name="releaseDate" value={formData.releaseDate} onChange={handleChange} className="w-full p-2.5 border rounded-md border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="예: 2011-01-01, 2011, 미상" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1.5 text-zinc-700 dark:text-zinc-300" htmlFor="style">스타일</label>
+                  <input id="style" name="style" value={formData.style} onChange={handleChange} className="w-full p-2.5 border rounded-md border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="예: Contemporary Jazz, Cool Jazz" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 text-zinc-700 dark:text-zinc-300" htmlFor="label">레이블</label>
+                  <input id="label" name="label" value={formData.label} onChange={handleChange} className="w-full p-2.5 border rounded-md border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="예: Pacific Jazz" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 text-zinc-700 dark:text-zinc-300" htmlFor="catalogNo">카탈로그 넘버</label>
+                  <input id="catalogNo" name="catalogNo" value={formData.catalogNo} onChange={handleChange} className="w-full p-2.5 border rounded-md border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="예: PJ-1222" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1.5 text-zinc-700 dark:text-zinc-300" htmlFor="description">설명</label>
+                  <textarea id="description" name="description" value={formData.description} onChange={handleChange} rows={2} className="w-full p-2.5 border rounded-md border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none" placeholder="앨범에 대한 추가 정보나 개인적인 메모" />
+                </div>
+              </div>
             </div>
             
-            {/* 다중 이미지 관리 섹션 */}
-            <div className="md:col-span-2">
-              <div className="font-bold text-lg border-b pb-2 mb-4">앨범 이미지</div>
+            {/* 앨범 이미지 섹션 */}
+            <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-100 dark:border-zinc-800 p-4">
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">앨범 이미지</h3>
               <AlbumImageManager
                 images={albumImages}
                 onImagesChange={setAlbumImages}
-                className="mb-4"
               />
             </div>
-            
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1" htmlFor="description">설명</label>
-              <textarea id="description" name="description" value={formData.description} onChange={handleChange} rows={2} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" />
-            </div>
 
-            <div className="md:col-span-2 font-bold text-lg border-b pb-2 mb-2 mt-4">구입 정보</div>
-            <div className="flex items-end gap-2">
-              <div className="flex-grow">
-                <label className="block text-sm font-medium mb-1" htmlFor="priceAmount">가격</label>
-                <input id="priceAmount" name="priceAmount" type="number" value={formData.priceAmount} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: 30000" />
+            {/* 구입 정보 섹션 */}
+            <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-100 dark:border-zinc-800 p-4">
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">구입 정보</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-end gap-2">
+                  <div className="flex-grow">
+                    <label className="block text-sm font-medium mb-1.5 text-zinc-700 dark:text-zinc-300" htmlFor="priceAmount">가격</label>
+                    <input id="priceAmount" name="priceAmount" type="number" value={formData.priceAmount} onChange={handleChange} className="w-full p-2.5 border rounded-md border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="30000" />
+                  </div>
+                  <select name="priceCurrency" value={formData.priceCurrency} onChange={handleChange} className="p-2.5 border rounded-md border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    <option value="KRW">KRW</option>
+                    <option value="USD">USD</option>
+                    <option value="JPY">JPY</option>
+                    <option value="EUR">EUR</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 text-zinc-700 dark:text-zinc-300" htmlFor="purchaseStore">구입처</label>
+                  <div className="relative">
+                    <input
+                      id="purchaseStore"
+                      name="purchaseStore"
+                      value={formData.purchaseStore}
+                      onChange={handleChange}
+                      list="storesList"
+                      className="w-full p-2.5 border rounded-md border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      placeholder="구입처를 입력하거나 선택하세요"
+                    />
+                    {existingStores.length > 0 && (
+                      <datalist id="storesList">
+                        {existingStores.map(store => (
+                          <option key={store} value={store} />
+                        ))}
+                      </datalist>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 text-zinc-700 dark:text-zinc-300" htmlFor="purchaseDate">구매일</label>
+                  <input id="purchaseDate" name="purchaseDate" value={formData.purchaseDate} onChange={handleChange} className="w-full p-2.5 border rounded-md border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="예: 2024-01-01, 2024, 미상" />
+                </div>
               </div>
-              <select name="priceCurrency" value={formData.priceCurrency} onChange={handleChange} className="p-2 border rounded border-zinc-200 dark:border-zinc-800">
-                <option value="KRW">KRW</option>
-                <option value="USD">USD</option>
-                <option value="JPY">JPY</option>
-                <option value="EUR">EUR</option>
-              </select>
+              
+              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                <input type="checkbox" id="isFavorite" name="isFavorite" checked={formData.isFavorite} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                <label htmlFor="isFavorite" className="text-sm text-zinc-700 dark:text-zinc-300">즐겨찾기에 추가</label>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="purchaseStore">구입처</label>
-              <input id="purchaseStore" name="purchaseStore" value={formData.purchaseStore} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: 알라딘" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="purchaseDate">구매일</label>
-              <input id="purchaseDate" name="purchaseDate" value={formData.purchaseDate} onChange={handleChange} className="w-full p-2 border rounded border-zinc-200 dark:border-zinc-800" placeholder="예: 2024-01-01, 2024, 미상" />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 mt-6">
-            <input type="checkbox" id="isFavorite" name="isFavorite" checked={formData.isFavorite} onChange={handleChange} />
-            <label htmlFor="isFavorite" className="text-sm">즐겨찾기</label>
           </div>
         </div>
 
-        <div className="p-6 flex gap-2 justify-end border-t border-zinc-200 dark:border-zinc-800"> {/* Footer section (buttons) */} 
-          <button type="button" className="px-4 py-2 rounded bg-zinc-200 dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-800" onClick={onCancel}>취소</button>
-          <button type="button" className="px-4 py-2 rounded bg-blue-600 text-white"
+        <div className="p-6 flex gap-3 justify-end border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50"> {/* Footer section (buttons) */} 
+          <button type="button" className="px-5 py-2.5 rounded-md bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors font-medium" onClick={onCancel}>취소</button>
+          <button type="button" className="px-5 py-2.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium shadow-sm"
             onClick={handleSubmit}>
-            {initialData ? "수정 완료" : "등록"}
+            {initialData ? "수정 완료" : "앨범 등록"}
           </button>
         </div>
       </form>

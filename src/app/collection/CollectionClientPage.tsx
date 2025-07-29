@@ -361,6 +361,15 @@ export default function CollectionClientPage() {
         return filtered;
     }, [albums, searchTerm, filterType, sortKey, sortOrder]);
 
+    // 기존 구입처 목록 수집
+    const existingStores = useMemo(() => {
+        const stores = albums
+            .map(album => album.purchaseStore)
+            .filter((store): store is string => store != null && store.trim() !== '') // 타입 가드로 string만 필터링
+            .filter((store, index, arr) => arr.indexOf(store) === index); // 중복 제거
+        return stores.sort(); // 알파벳 순으로 정렬
+    }, [albums]);
+
     // 앨범 네비게이션 로직
     const selectedAlbumIndex = selectedAlbum ? filteredAndSortedAlbums.findIndex(album => album.id === selectedAlbum.id) : -1;
     
@@ -613,6 +622,7 @@ export default function CollectionClientPage() {
                                 onCancel={() => { setShowForm(false); setEditingAlbum(null); }}
                                 initialData={editingAlbum || undefined}
                                 discogsToken={discogsToken} // discogsToken prop 전달
+                                existingStores={existingStores} // 기존 구입처 목록 전달
                             />
                         </div>
                     </div>
