@@ -780,7 +780,8 @@ export default function CollectionClientPage() {
                         variant="default"
                         size="icon"
                         onClick={() => setShowForm(true)}
-                        className="fixed bottom-4 right-4 h-14 w-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 z-50"
+                        className="fixed bottom-4 h-14 w-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 z-50"
+                        style={{ right: 'calc(50vw - 24rem - 11.5rem)' }}
                     >
                         <Plus className="h-7 w-7" />
                         <span className="sr-only">앨범 추가</span>

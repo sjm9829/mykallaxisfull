@@ -246,52 +246,13 @@ export function PriceSummaryModal({ summary, onClose }: PriceSummaryModalProps) 
 
               {/* 총합 (환율 적용 KRW) */}
               {summary.totalWithPrice > 0 && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 flex flex-col items-center justify-center text-center">
                   <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                    총 지출 금액 (환율 적용)
+                    총 지출 금액
                   </h3>
                   <p className="text-3xl font-bold text-blue-600">
                     {formatCurrency(totalSpentInKRW, 'KRW')}
                   </p>
-                  <div className="mt-3 space-y-1">
-                    {!isLoadingRates && exchangeRates && (
-                      <>
-                        <p className="text-sm text-blue-700 dark:text-blue-300">
-                          환율 기준: 1 USD = {exchangeRates.USD.toLocaleString()}원, 1 EUR = {exchangeRates.EUR.toLocaleString()}원, 1 JPY = {exchangeRates.JPY.toLocaleString()}원
-                        </p>
-                        {summary.totalSpent.KRW > 0 && (
-                          <p className="text-sm text-blue-700 dark:text-blue-300">
-                            KRW 직접 구입: {formatCurrency(summary.totalSpent.KRW, 'KRW')}
-                          </p>
-                        )}
-                        {summary.totalSpent.USD > 0 && (
-                          <p className="text-sm text-blue-700 dark:text-blue-300">
-                            USD 구입분: {formatCurrency(summary.totalSpent.USD * exchangeRates.USD, 'KRW')} (${summary.totalSpent.USD.toLocaleString()})
-                          </p>
-                        )}
-                        {summary.totalSpent.EUR > 0 && (
-                          <p className="text-sm text-blue-700 dark:text-blue-300">
-                            EUR 구입분: {formatCurrency(summary.totalSpent.EUR * exchangeRates.EUR, 'KRW')} (€{summary.totalSpent.EUR.toLocaleString()})
-                          </p>
-                        )}
-                        {summary.totalSpent.JPY > 0 && (
-                          <p className="text-sm text-blue-700 dark:text-blue-300">
-                            JPY 구입분: {formatCurrency(summary.totalSpent.JPY * exchangeRates.JPY, 'KRW')} (¥{summary.totalSpent.JPY.toLocaleString()})
-                          </p>
-                        )}
-                      </>
-                    )}
-                    {isLoadingRates && (
-                      <p className="text-sm text-blue-700 dark:text-blue-300">
-                        환율 정보를 불러오는 중...
-                      </p>
-                    )}
-                    {!isLoadingRates && !exchangeRates && (
-                      <p className="text-sm text-orange-600 dark:text-orange-400">
-                        환율 정보를 불러올 수 없어 근사치로 계산되었습니다
-                      </p>
-                    )}
-                  </div>
                 </div>
               )}
             </div>
