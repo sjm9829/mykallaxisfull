@@ -55,10 +55,29 @@ export function DiscogsTokenSettings({ onClose, discogsToken, onTokenChange }: D
             toast.success("Discogs 개인 액세스 토큰이 유효하며 저장되었습니다.");
             onClose();
             return;
+          } else {
+            toast.error(`토큰 유효성 검사 실패: ${result.error || 'Invalid token'}`);
+            return;
           }
+        } else if (response.status === 404) {
+          console.log('서버 API가 404로 응답함. Edge Function 배포를 확인하세요.');
+          toast.error("서버 API를 찾을 수 없습니다. 관리자에게 문의하세요.");
+          return;
+        } else {
+          const result = await response.json();
+          toast.error(`토큰 유효성 검사 실패: ${result.error || 'Server error'}`);
+          return;
         }
       } catch (serverError) {
-        console.log('서버 API 실패, 클라이언트에서 직접 검증 시도:', serverError);
+        console.log('서버 API 실패:', serverError);
+        
+        if (serverError instanceof TypeError && serverError.message.includes('Content Security Policy')) {
+          toast.error("보안 정책으로 인해 토큰 검증에 실패했습니다. 서버 설정을 확인하세요.");
+          return;
+        }
+        
+        toast.error("서버와의 연결에 실패했습니다. 네트워크 상태를 확인하세요.");
+        return;
       }
 
       // 서버 API 실패 시 클라이언트에서 직접 Discogs API 호출
@@ -91,8 +110,10 @@ export function DiscogsTokenSettings({ onClose, discogsToken, onTokenChange }: D
     } catch (error) {
       console.error("토큰 유효성 검사 중 오류 발생:", error);
       
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        toast.error("네트워크 연결을 확인해주세요. Discogs API에 접근할 수 없습니다.");
+      if (error instanceof TypeError && error.message.includes('Content Security Policy')) {
+        toast.error("서버 API를 통한 토큰 검증이 필요합니다. 관리자에게 문의하세요.");
+      } else if (error instanceof TypeError && error.message.includes('fetch')) {
+        toast.error("네트워크 연결을 확인해주세요. API 서버에 접근할 수 없습니다.");
       } else if (error instanceof SyntaxError) {
         toast.error("서버 응답 파싱 오류가 발생했습니다.");
       } else {

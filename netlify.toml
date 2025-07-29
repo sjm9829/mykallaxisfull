@@ -8,3 +8,7 @@
 [build.environment]
   NODE_VERSION = "18"
   NPM_FLAGS = "--version" # 캐시 문제 방지
+
+[[edge_functions]]
+  path = "/api/discogs/verify-token"
+  function = "verify-token"
