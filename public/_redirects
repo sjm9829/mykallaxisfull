@@ -1,1 +1,5 @@
-/* /index.html 200
+# API routes
+/api/*  /.netlify/functions/:splat  200
+
+# Fallback for client-side routing
+/*    /    200
