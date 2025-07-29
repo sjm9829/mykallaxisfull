@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Netlify에서 빌드 시 필요한 설정
+  experimental: {
+    // serverComponentsExternalPackages를 사용하여 서버 사이드에서만 실행되는 패키지 명시
+  },
   transpilePackages: ['html-to-image'],
   images: {
     remotePatterns: [

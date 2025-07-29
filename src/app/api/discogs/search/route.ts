@@ -19,7 +19,14 @@ export async function GET(request: Request) {
 
   // 아티스트와 타이틀 중 하나라도 없으면 400 에러 반환
   if (!artist && !title) {
-    return NextResponse.json({ error: 'Artist or title is required' }, { status: 400 });
+    return NextResponse.json({ error: 'Artist or title is required' }, { 
+      status: 400,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, x-discogs-personal-access-token',
+      }
+    });
   }
 
   const personalAccessToken = request.headers.get('x-discogs-personal-access-token');
@@ -32,7 +39,14 @@ export async function GET(request: Request) {
     const DISCOGS_API_SECRET = process.env.DISCOGS_API_SECRET;
 
     if (!DISCOGS_API_KEY || !DISCOGS_API_SECRET) {
-      return NextResponse.json({ error: 'Discogs API credentials are not set up on the server.' }, { status: 500 });
+      return NextResponse.json({ error: 'Discogs API credentials are not set up on the server.' }, { 
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, x-discogs-personal-access-token',
+        }
+      });
     }
     authHeader = `Discogs key=${DISCOGS_API_KEY}, secret=${DISCOGS_API_SECRET}`;
   }
@@ -58,20 +72,40 @@ export async function GET(request: Request) {
     const response = await fetch(discogsSearchUrl.toString(), {
       headers: {
         'Authorization': authHeader,
-        'User-Agent': 'MKIF-Collection-App/0.1',
+        'User-Agent': 'MKIF-Collection-App/1.0',
       },
     });
 
     if (!response.ok) {
       const errorData = await response.json();
       console.error('Discogs API Error:', errorData);
-      return NextResponse.json({ error: 'Failed to fetch data from Discogs' }, { status: response.status });
+      return NextResponse.json({ error: 'Failed to fetch data from Discogs' }, { 
+        status: response.status,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, x-discogs-personal-access-token',
+        }
+      });
     }
 
     const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, x-discogs-personal-access-token',
+      }
+    });
   } catch (error) {
     console.error('Internal Server Error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { 
+      status: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, x-discogs-personal-access-token',
+      }
+    });
   }
 }

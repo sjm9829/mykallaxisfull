@@ -1,5 +1,5 @@
-# API routes
-/api/*  /.netlify/functions/:splat  200
+# API routes handled by Next.js
+/api/*  /.netlify/functions/___netlify-handler  200
 
 # Fallback for client-side routing
-/*    /    200
+/*    /index.html   200
