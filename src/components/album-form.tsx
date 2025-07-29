@@ -127,7 +127,7 @@ export function AlbumForm({ onSubmit, onCancel, initialData, discogsToken, exist
 
       const headers: HeadersInit = {};
       if (discogsToken) {
-        headers['X-Discogs-Personal-Access-Token'] = discogsToken;
+        headers['Authorization'] = `Bearer ${discogsToken}`;
       }
 
       const response = await fetch(`/api/discogs/search?${queryParams.toString()}`, { headers });

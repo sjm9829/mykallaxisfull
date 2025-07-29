@@ -12,3 +12,11 @@
 [[edge_functions]]
   path = "/api/discogs/verify-token"
   function = "verify-token"
+
+[[edge_functions]]
+  path = "/api/discogs/search"
+  function = "discogs-search"
+
+[[edge_functions]]
+  path = "/api/discogs/release/*"
+  function = "discogs-release"
