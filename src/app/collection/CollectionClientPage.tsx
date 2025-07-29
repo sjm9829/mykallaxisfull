@@ -32,6 +32,7 @@ import { CloudSyncModal } from '@/components/cloud-sync-modal';
 import { ExcelSyncModal } from '@/components/excel-sync-modal';
 import { HelpModal } from '@/components/help-modal';
 import { EmptyStateGuidance } from '@/components/empty-state-guidance';
+import { PriceSummaryModal } from '@/components/price-summary-modal';
 
 import type { CollectionData } from '@/services/gist';
 
@@ -53,6 +54,7 @@ export default function CollectionClientPage() {
     const [showCloudSyncModal, setShowCloudSyncModal] = useState(false); // 클라우드 동기화 모달 상태
     const [showExcelSyncModal, setShowExcelSyncModal] = useState(false); // 엑셀 동기화 모달 상태
     const [showHelpModal, setShowHelpModal] = useState(false); // 도움말 모달 상태
+    const [showPriceSummaryModal, setShowPriceSummaryModal] = useState(false); // 가격 요약 모달 상태
 
 
     // 필터, 정렬, 검색 상태
@@ -370,6 +372,52 @@ export default function CollectionClientPage() {
         return stores.sort(); // 알파벳 순으로 정렬
     }, [albums]);
 
+    // 가격 요약 계산
+    const priceSummary = useMemo(() => {
+        const summary = {
+            totalAlbums: albums.length,
+            totalWithPrice: 0,
+            totalSpent: {
+                KRW: 0,
+                USD: 0,
+                JPY: 0,
+                EUR: 0
+            },
+            averagePrice: {
+                KRW: 0,
+                USD: 0,
+                JPY: 0,
+                EUR: 0
+            },
+            byCurrency: {
+                KRW: { count: 0, total: 0 },
+                USD: { count: 0, total: 0 },
+                JPY: { count: 0, total: 0 },
+                EUR: { count: 0, total: 0 }
+            }
+        };
+
+        albums.forEach(album => {
+            if (album.priceAmount && album.priceAmount > 0 && album.priceCurrency) {
+                summary.totalWithPrice++;
+                const currency = album.priceCurrency;
+                summary.totalSpent[currency] += album.priceAmount;
+                summary.byCurrency[currency].count++;
+                summary.byCurrency[currency].total += album.priceAmount;
+            }
+        });
+
+        // 평균 가격 계산
+        Object.keys(summary.byCurrency).forEach(currency => {
+            const curr = currency as keyof typeof summary.byCurrency;
+            if (summary.byCurrency[curr].count > 0) {
+                summary.averagePrice[curr] = summary.byCurrency[curr].total / summary.byCurrency[curr].count;
+            }
+        });
+
+        return summary;
+    }, [albums]);
+
     // 앨범 네비게이션 로직
     const selectedAlbumIndex = selectedAlbum ? filteredAndSortedAlbums.findIndex(album => album.id === selectedAlbum.id) : -1;
     
@@ -429,6 +477,17 @@ export default function CollectionClientPage() {
                                 <p className="text-lg font-normal text-zinc-500 dark:text-zinc-400">
                                     총 {filteredAndSortedAlbums.length}장의 음반
                                 </p>
+                                {priceSummary.totalWithPrice > 0 && (
+                                    <>
+                                        <span className="text-zinc-400 dark:text-zinc-500">•</span>
+                                        <button
+                                            onClick={() => setShowPriceSummaryModal(true)}
+                                            className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+                                        >
+                                            판도라의 상자
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </div>
                         <div className="flex gap-2">
@@ -703,6 +762,13 @@ export default function CollectionClientPage() {
                 {showHelpModal && (
                     <HelpModal
                         onClose={() => setShowHelpModal(false)}
+                    />
+                )}
+
+                {showPriceSummaryModal && (
+                    <PriceSummaryModal
+                        summary={priceSummary}
+                        onClose={() => setShowPriceSummaryModal(false)}
                     />
                 )}
 
