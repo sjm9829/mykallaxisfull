@@ -8,12 +8,22 @@ export async function exportAlbumsAsImage(albums: Album[], filename: string = "c
     return;
   }
 
+  console.log("🔍 Export Debug Info:");
+  console.log("Total albums:", albums.length);
+  console.log("Albums data:", albums.map(a => ({ id: a.id, title: a.title, artist: a.artist })));
+
+  // 각 앨범의 커버 이미지 URL을 추출 (중복 제거)
   const albumCovers = albums.map(album => getPrimaryCoverImage(album)).filter((url): url is string => !!url);
+  console.log("Album covers (before dedup):", albumCovers.length, albumCovers);
 
   if (albumCovers.length === 0) {
     alert("앨범 커버 이미지가 없습니다.");
     return;
   }
+
+  // 중복된 URL 제거 (같은 앨범이 여러 번 추가된 경우 방지)
+  const uniqueAlbumCovers = Array.from(new Set(albumCovers));
+  console.log("Album covers (after dedup):", uniqueAlbumCovers.length, uniqueAlbumCovers);
 
   // 고정 설정값
   const FIXED_WIDTH = 900; // 고정 용지 너비
@@ -25,15 +35,12 @@ export async function exportAlbumsAsImage(albums: Album[], filename: string = "c
   // 열 수 검증 및 조정
   const columns = Math.max(MIN_COLUMNS, Math.min(MAX_COLUMNS, gridColumns));
   
-  // ⚡️ 중복 방지: 실제 앨범 수만큼만 사용 (무한 반복 방지)
-  const limitedAlbumCovers = albumCovers.slice(0, albums.length);
-  
   // 개별 앨범 커버 크기 계산 (정사각형)
   const availableWidth = FIXED_WIDTH - (PADDING * 2) - (GAP * (columns - 1));
   const coverSize = Math.floor(availableWidth / columns);
   
   // 실제 사용할 앨범 수 계산 (행 수는 앨범 수에 따라 자동 결정)
-  const rows = Math.ceil(limitedAlbumCovers.length / columns);
+  const rows = Math.ceil(uniqueAlbumCovers.length / columns);
   const actualHeight = (coverSize * rows) + (GAP * (rows - 1)) + (PADDING * 2);
 
   // 컨테이너 생성
@@ -48,7 +55,7 @@ export async function exportAlbumsAsImage(albums: Album[], filename: string = "c
   container.style.boxSizing = "border-box";
 
   // 이미지 로드 프로미스 생성
-  const imageLoadPromises = limitedAlbumCovers.map((url: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+  const imageLoadPromises = uniqueAlbumCovers.map((url: string) => new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
