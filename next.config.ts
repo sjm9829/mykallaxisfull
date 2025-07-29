@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Netlify 배포를 위한 설정
+  output: process.env.NODE_ENV === 'production' ? undefined : undefined,
   // Netlify에서 빌드 시 필요한 설정
   experimental: {
     // serverComponentsExternalPackages를 사용하여 서버 사이드에서만 실행되는 패키지 명시

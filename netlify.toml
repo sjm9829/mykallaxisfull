@@ -7,6 +7,4 @@
 
 [build.environment]
   NODE_VERSION = "18"
-
-[functions]
-  directory = ".netlify/functions"
+  NPM_FLAGS = "--version" # 캐시 문제 방지

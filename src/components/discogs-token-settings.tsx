@@ -36,39 +36,63 @@ export function DiscogsTokenSettings({ onClose, discogsToken, onTokenChange }: D
     try {
       console.log('Sending token verification request...');
       
-      const response = await fetch('/api/discogs/verify-token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token: cleanToken }),
-      });
+      // 먼저 서버 API 시도
+      try {
+        const response = await fetch('/api/discogs/verify-token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ token: cleanToken }),
+        });
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
+        console.log('Response status:', response.status);
 
-      if (!response.ok) {
-        console.error('HTTP error:', response.status, response.statusText);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.valid) {
+            await onTokenChange(cleanToken);
+            toast.success("Discogs 개인 액세스 토큰이 유효하며 저장되었습니다.");
+            onClose();
+            return;
+          }
+        }
+      } catch (serverError) {
+        console.log('서버 API 실패, 클라이언트에서 직접 검증 시도:', serverError);
       }
 
-      const result = await response.json();
-      console.log('Response data:', result);
+      // 서버 API 실패 시 클라이언트에서 직접 Discogs API 호출
+      console.log('클라이언트에서 직접 Discogs API 호출...');
+      
+      const directResponse = await fetch('https://api.discogs.com/oauth/identity', {
+        headers: {
+          'User-Agent': 'MKIF-Collection-App/1.0',
+          'Authorization': `Discogs token=${cleanToken}`,
+        },
+      });
 
-      if (response.ok && result.valid) {
+      if (directResponse.ok) {
+        const userData = await directResponse.json();
+        console.log('직접 검증 성공:', userData.username);
         await onTokenChange(cleanToken);
         toast.success("Discogs 개인 액세스 토큰이 유효하며 저장되었습니다.");
-        onClose(); // 성공 시 모달 닫기
+        onClose();
       } else {
-        const errorMessage = result.error || 'Unknown error';
-        console.error('Token validation failed:', errorMessage);
+        const errorText = await directResponse.text();
+        let errorMessage = 'Invalid token';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          // 파싱 실패 시 기본 메시지 사용
+        }
         toast.error(`토큰 유효성 검사 실패: ${errorMessage}`);
       }
     } catch (error) {
       console.error("토큰 유효성 검사 중 오류 발생:", error);
       
-      // 더 자세한 오류 정보 제공
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        toast.error("네트워크 연결을 확인해주세요. API 서버에 접근할 수 없습니다.");
+        toast.error("네트워크 연결을 확인해주세요. Discogs API에 접근할 수 없습니다.");
       } else if (error instanceof SyntaxError) {
         toast.error("서버 응답 파싱 오류가 발생했습니다.");
       } else {
