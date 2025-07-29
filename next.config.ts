@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   },
   transpilePackages: ['html-to-image'],
   images: {
+    // Netlify에서 이미지 캐시 문제 해결
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
