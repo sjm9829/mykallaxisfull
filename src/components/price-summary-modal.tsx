@@ -29,6 +29,40 @@ interface PriceSummaryModalProps {
   onClose: () => void;
 }
 
+interface ExchangeRates {
+  USD: number;
+  JPY: number;
+  EUR: number;
+}
+
+// 환율 정보를 가져오는 함수
+const fetchExchangeRates = async (): Promise<ExchangeRates | null> => {
+  try {
+    // ExchangeRate-API (무료, 제한 있음)를 사용
+    const response = await fetch('https://api.exchangerate-api.com/v4/latest/KRW');
+    if (!response.ok) {
+      throw new Error('환율 정보를 가져올 수 없습니다');
+    }
+    
+    const data = await response.json();
+    
+    // KRW 기준이므로 역수를 계산하여 다른 통화를 KRW로 환산하는 비율을 구함
+    return {
+      USD: 1 / data.rates.USD, // 1 USD = X KRW
+      JPY: 1 / data.rates.JPY, // 1 JPY = X KRW  
+      EUR: 1 / data.rates.EUR, // 1 EUR = X KRW
+    };
+  } catch (error) {
+    console.error('환율 정보 가져오기 실패:', error);
+    // 환율 정보를 가져올 수 없는 경우 대략적인 고정 환율 사용
+    return {
+      USD: 1300, // 1 USD ≈ 1300 KRW
+      JPY: 9,    // 1 JPY ≈ 9 KRW
+      EUR: 1400, // 1 EUR ≈ 1400 KRW
+    };
+  }
+};
+
 const formatCurrency = (amount: number, currency: string) => {
   const options: Intl.NumberFormatOptions = {
     style: 'currency',
@@ -47,6 +81,30 @@ const formatCurrency = (amount: number, currency: string) => {
 
 export function PriceSummaryModal({ summary, onClose }: PriceSummaryModalProps) {
   const modalRef = React.useRef<HTMLDivElement>(null);
+  const [exchangeRates, setExchangeRates] = React.useState<ExchangeRates | null>(null);
+  const [isLoadingRates, setIsLoadingRates] = React.useState(true);
+
+  // 환율 정보 로드
+  React.useEffect(() => {
+    const loadExchangeRates = async () => {
+      setIsLoadingRates(true);
+      const rates = await fetchExchangeRates();
+      setExchangeRates(rates);
+      setIsLoadingRates(false);
+    };
+    
+    loadExchangeRates();
+  }, []);
+
+  // KRW로 환산한 총 지출 계산
+  const totalSpentInKRW = React.useMemo(() => {
+    if (!exchangeRates) return summary.totalSpent.KRW;
+    
+    return summary.totalSpent.KRW + 
+           summary.totalSpent.USD * exchangeRates.USD +
+           summary.totalSpent.JPY * exchangeRates.JPY +
+           summary.totalSpent.EUR * exchangeRates.EUR;
+  }, [summary, exchangeRates]);
 
   // 키보드 이벤트 처리
   React.useEffect(() => {
@@ -186,20 +244,54 @@ export function PriceSummaryModal({ summary, onClose }: PriceSummaryModalProps) 
                 </div>
               </div>
 
-              {/* 총합 (KRW 기준 강조) */}
-              {summary.totalSpent.KRW > 0 && (
+              {/* 총합 (환율 적용 KRW) */}
+              {summary.totalWithPrice > 0 && (
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                   <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                    KRW 총 지출 금액
+                    총 지출 금액 (환율 적용)
                   </h3>
                   <p className="text-3xl font-bold text-blue-600">
-                    {formatCurrency(summary.totalSpent.KRW, 'KRW')}
+                    {formatCurrency(totalSpentInKRW, 'KRW')}
                   </p>
-                  {summary.byCurrency.KRW.count > 0 && (
-                    <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                      {summary.byCurrency.KRW.count}장 기준
-                    </p>
-                  )}
+                  <div className="mt-3 space-y-1">
+                    {!isLoadingRates && exchangeRates && (
+                      <>
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          환율 기준: 1 USD = {exchangeRates.USD.toLocaleString()}원, 1 EUR = {exchangeRates.EUR.toLocaleString()}원, 1 JPY = {exchangeRates.JPY.toLocaleString()}원
+                        </p>
+                        {summary.totalSpent.KRW > 0 && (
+                          <p className="text-sm text-blue-700 dark:text-blue-300">
+                            KRW 직접 구입: {formatCurrency(summary.totalSpent.KRW, 'KRW')}
+                          </p>
+                        )}
+                        {summary.totalSpent.USD > 0 && (
+                          <p className="text-sm text-blue-700 dark:text-blue-300">
+                            USD 구입분: {formatCurrency(summary.totalSpent.USD * exchangeRates.USD, 'KRW')} (${summary.totalSpent.USD.toLocaleString()})
+                          </p>
+                        )}
+                        {summary.totalSpent.EUR > 0 && (
+                          <p className="text-sm text-blue-700 dark:text-blue-300">
+                            EUR 구입분: {formatCurrency(summary.totalSpent.EUR * exchangeRates.EUR, 'KRW')} (€{summary.totalSpent.EUR.toLocaleString()})
+                          </p>
+                        )}
+                        {summary.totalSpent.JPY > 0 && (
+                          <p className="text-sm text-blue-700 dark:text-blue-300">
+                            JPY 구입분: {formatCurrency(summary.totalSpent.JPY * exchangeRates.JPY, 'KRW')} (¥{summary.totalSpent.JPY.toLocaleString()})
+                          </p>
+                        )}
+                      </>
+                    )}
+                    {isLoadingRates && (
+                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                        환율 정보를 불러오는 중...
+                      </p>
+                    )}
+                    {!isLoadingRates && !exchangeRates && (
+                      <p className="text-sm text-orange-600 dark:text-orange-400">
+                        환율 정보를 불러올 수 없어 근사치로 계산되었습니다
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
