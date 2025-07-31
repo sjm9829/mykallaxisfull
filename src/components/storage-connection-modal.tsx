@@ -155,14 +155,6 @@ export function StorageConnectionModal({ onClose, onConnectionSelected }: Storag
             </h2>
             <div className="flex items-center gap-2">
               <button
-                onClick={handleShowSetupGuide}
-                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                aria-label="설정 가이드"
-                title="클라우드 스토리지 설정 방법"
-              >
-                <Info className="w-5 h-5" />
-              </button>
-              <button
                 onClick={onClose}
                 disabled={isConnecting}
                 className="text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
