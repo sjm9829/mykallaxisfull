@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { CloudFile, StorageProvider } from '@/types/storage';
 import { storageManager } from '@/lib/storage-manager';
-import { Folder, FileText, Loader2, X, Plus, RefreshCw } from 'lucide-react';
+import { FileText, Loader2, X, Plus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface CloudFileBrowserProps {
@@ -16,14 +16,12 @@ export function CloudFileBrowser({ provider, onFileSelected, onCreateNew, onClos
   const modalRef = React.useRef<HTMLDivElement>(null);
   const [files, setFiles] = React.useState<CloudFile[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
-  const [currentPath, setCurrentPath] = React.useState('');
   const [newFileName, setNewFileName] = React.useState('');
-  const [showCreateInput, setShowCreateInput] = React.useState(mode === 'create');
 
   // 파일 목록 로드
   React.useEffect(() => {
     loadFiles();
-  }, [currentPath]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadFiles = async () => {
     try {
@@ -48,7 +46,7 @@ export function CloudFileBrowser({ provider, onFileSelected, onCreateNew, onClos
         (service as { accessToken?: string }).accessToken = connection.accessToken;
       }
       
-      const cloudFiles = await service.listFiles(currentPath);
+      const cloudFiles = await service.listFiles('');
       setFiles(cloudFiles);
     } catch (error) {
       console.error('파일 목록 로드 실패:', error);
@@ -85,7 +83,7 @@ export function CloudFileBrowser({ provider, onFileSelected, onCreateNew, onClos
         albums: []
       };
 
-      const newFile = await service.createFile(fileName, JSON.stringify(emptyCollection, null, 2), currentPath);
+      const newFile = await service.createFile(fileName, JSON.stringify(emptyCollection, null, 2), '');
       console.log('Created new file:', newFile);
       onCreateNew(newFile);
       onClose();

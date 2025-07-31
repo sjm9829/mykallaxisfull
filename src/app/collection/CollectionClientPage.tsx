@@ -72,7 +72,6 @@ export default function CollectionClientPage() {
 
     const formModalRef = useModalAccessibility(() => { setShowForm(false); setEditingAlbum(null); });
     const discogsSettingsModalRef = useModalAccessibility(() => { setShowDiscogsTokenSettings(false); });
-    const collectionSettingsModalRef = useModalAccessibility(() => { setShowCollectionSettings(false); });
 
     const loadFileContent = useCallback(async (handle: FileSystemFileHandle, expectedUsername: string, expectedCollectionName: string) => {
         console.log("Loading collection:", expectedUsername, expectedCollectionName);
@@ -156,7 +155,7 @@ export default function CollectionClientPage() {
                 setIsLoading(false);
             }
         
-    }, [router]);
+    }, [router, searchParams]);
 
     const loadCloudFileContent = useCallback(async (expectedUsername: string, expectedCollectionName: string) => {
         console.log("Loading cloud collection:", expectedUsername, expectedCollectionName);
@@ -214,7 +213,7 @@ export default function CollectionClientPage() {
             // 메타데이터가 없거나 일치하지 않으면 경고만 하고 계속 진행
             if (!parsedContent._metadata?.username || !parsedContent._metadata?.collectionName) {
                 console.warn("Cloud file missing metadata, using URL parameters");
-                toast.warn("파일 메타데이터가 부족합니다. URL 파라미터를 사용합니다.");
+                toast.error("파일 메타데이터가 부족합니다. URL 파라미터를 사용합니다.");
             }
 
             const albumsToSet = parsedContent.albums && Array.isArray(parsedContent.albums) ? parsedContent.albums : [];
@@ -306,7 +305,16 @@ export default function CollectionClientPage() {
             
             if (cloudFile) {
                 // 클라우드 저장
-                const contentToSave = {
+                const contentToSave: {
+                    _metadata: {
+                        username: string;
+                        collectionName: string;
+                        createdAt: string;
+                        updatedAt: string;
+                        encryptedDiscogsToken?: { encryptedData: string; iv: string; salt: string; }
+                    },
+                    albums: Album[]
+                } = {
                     _metadata: {
                         username: newUsername,
                         collectionName: newCollectionName,
@@ -326,7 +334,16 @@ export default function CollectionClientPage() {
                 // 로컬 저장
                 const permissionGranted = await verifyPermission(fileHandle, false);
                 if (permissionGranted) {
-                    const contentToSave = {
+                    const contentToSave: {
+                        _metadata: {
+                            username: string;
+                            collectionName: string;
+                            createdAt: string;
+                            updatedAt: string;
+                            encryptedDiscogsToken?: { encryptedData: string; iv: string; salt: string; }
+                        },
+                        albums: Album[]
+                    } = {
                         _metadata: {
                             username: newUsername,
                             collectionName: newCollectionName,
@@ -346,6 +363,9 @@ export default function CollectionClientPage() {
             }
             
             toast.success('컬렉션 설정이 저장되었습니다.');
+            
+            // 페이지 새로고침으로 새로운 설정값 반영
+            window.location.reload();
         } catch (error) {
             console.error('컬렉션 설정 저장 실패:', error);
             toast.error('컬렉션 설정 저장에 실패했습니다.');
@@ -455,7 +475,7 @@ export default function CollectionClientPage() {
             console.error("Permission to write file was denied.");
             toast.error("파일 쓰기 권한이 거부되었습니다.");
         }
-    }, [fileHandle, hasPermission, username, fileName]);
+    }, [fileHandle, hasPermission, username, fileName, searchParams]);
 
     const handleSetDiscogsToken = useCallback(async (token: string | null) => {
         setDiscogsToken(token);

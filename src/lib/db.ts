@@ -38,7 +38,7 @@ const getDb = () => {
   }
   if (!dbPromise) {
     dbPromise = openDB<MyDB>('mkif-app-db', 2, { // Increment version to trigger upgrade
-      upgrade(db, oldVersion, _newVersion, _transaction) { // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      upgrade(db, oldVersion) {
         if (oldVersion < 1) {
           db.createObjectStore('collections-metadata', { keyPath: 'key' });
           db.createObjectStore('last-opened-collection', { keyPath: 'key' });

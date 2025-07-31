@@ -82,15 +82,12 @@ const formatCurrency = (amount: number, currency: string) => {
 export function PriceSummaryModal({ summary, onClose }: PriceSummaryModalProps) {
   const modalRef = React.useRef<HTMLDivElement>(null);
   const [exchangeRates, setExchangeRates] = React.useState<ExchangeRates | null>(null);
-  const [isLoadingRates, setIsLoadingRates] = React.useState(true);
 
   // 환율 정보 로드
   React.useEffect(() => {
     const loadExchangeRates = async () => {
-      setIsLoadingRates(true);
       const rates = await fetchExchangeRates();
       setExchangeRates(rates);
-      setIsLoadingRates(false);
     };
     
     loadExchangeRates();

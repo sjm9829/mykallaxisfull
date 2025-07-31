@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function GoogleCallbackPage() {
+function GoogleCallbackContent() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -67,5 +67,20 @@ export default function GoogleCallbackPage() {
         <p className="text-zinc-600">잠시만 기다려주세요.</p>
       </div>
     </div>
+  );
+}
+
+export default function GoogleCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-lg font-semibold mb-2">로딩 중...</h2>
+          <p className="text-zinc-600">잠시만 기다려주세요.</p>
+        </div>
+      </div>
+    }>
+      <GoogleCallbackContent />
+    </Suspense>
   );
 }

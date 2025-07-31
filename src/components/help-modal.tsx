@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useModalAccessibility } from '@/lib/useModalAccessibility';
 import { Button } from '@/components/ui/button';
-import { X, Plus, Share2, Settings, Search, ArrowUp, Cloud, FileSpreadsheet, Upload } from 'lucide-react';
+import { X, Plus, Share2, Settings, Search, ArrowUp, Cloud, FileSpreadsheet } from 'lucide-react';
 
 interface HelpModalProps {
   onClose: () => void;

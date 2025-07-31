@@ -92,15 +92,15 @@ export class GoogleDriveService implements StorageService {
       console.log('🔍 Google Drive API response data:', data);
       
       if (data.files) {
-        const jsonFiles = data.files.filter((file: any) => file.name.endsWith('.json'));
-        console.log('🔍 JSON files found:', jsonFiles.map((f: any) => f.name));
-        console.log('🔍 File details:', jsonFiles.map((f: any) => ({ id: f.id, name: f.name })));
+        const jsonFiles = data.files.filter((file: { name: string }) => file.name.endsWith('.json'));
+        console.log('🔍 JSON files found:', jsonFiles.map((f: { name: string }) => f.name));
+        console.log('🔍 File details:', jsonFiles.map((f: { id: string; name: string }) => ({ id: f.id, name: f.name })));
         
-        return jsonFiles.map((file: any) => ({
+        return jsonFiles.map((file: { id: string; name: string; size?: string; modifiedTime?: string }) => ({
           id: file.id,
           name: file.name,
           path: `/${file.name}`,
-          size: parseInt(file.size) || 0,
+          size: parseInt(file.size || '0') || 0,
           modifiedAt: file.modifiedTime,
           provider: 'googledrive' as StorageProvider
         }));
