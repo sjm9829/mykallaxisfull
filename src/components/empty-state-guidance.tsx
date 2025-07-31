@@ -117,7 +117,7 @@ export function EmptyStateGuidance({
               className="w-full"
             >
               <Cloud className="w-4 h-4 mr-2" />
-              클라우드 동기화
+              URL 공유
             </Button>
           </div>
         </div>

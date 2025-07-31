@@ -37,10 +37,10 @@ export function CloudSyncModal({
       const username = 'Anonymous';
       const result = await createGist(albums, username, collectionName);
       setCloudUrl(result.html_url);
-      toast.success('컬렉션이 클라우드에 저장되었습니다!');
+      toast.success('URL이 생성되었습니다!');
     } catch (error) {
-      console.error('클라우드 저장 오류:', error);
-      toast.error('클라우드 저장에 실패했습니다.');
+      console.error('URL 생성 오류:', error);
+      toast.error('URL 생성에 실패했습니다.');
     } finally {
       setIsUploading(false);
     }
@@ -53,7 +53,7 @@ export function CloudSyncModal({
     }
 
     if (!isValidGistUrl(inputUrl.trim())) {
-      toast.error('올바른 클라우드 URL을 입력해주세요.');
+      toast.error('올바른 URL을 입력해주세요.');
       return;
     }
 
@@ -64,8 +64,8 @@ export function CloudSyncModal({
       toast.success(`${data._metadata.collectionName} 컬렉션을 불러왔습니다! (${data.albums.length}개 앨범)`);
       onClose();
     } catch (error) {
-      console.error('클라우드 로드 오류:', error);
-      toast.error('컬렉션을 불러오는데 실패했습니다.');
+      console.error('URL 로드 오류:', error);
+      toast.error('URL을 불러오는데 실패했습니다.');
     } finally {
       setIsDownloading(false);
     }
@@ -84,7 +84,7 @@ export function CloudSyncModal({
       >
         <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
           <Cloud className="w-5 h-5" />
-          클라우드 동기화
+          URL 공유
         </h2>
         
         <button
@@ -100,10 +100,10 @@ export function CloudSyncModal({
           <div className="space-y-3">
             <h3 className="text-lg font-medium flex items-center gap-2">
               <Upload className="w-4 h-4" />
-              컬렉션 저장
+              URL 생성
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              현재 컬렉션({albums.length}개 앨범)을 클라우드에 저장합니다.
+              현재 컬렉션({albums.length}개 앨범) URL을 생성합니다.
             </p>
             
             {!cloudUrl ? (
@@ -113,7 +113,7 @@ export function CloudSyncModal({
                 className="w-full flex items-center gap-2"
               >
                 <Cloud className="w-4 h-4" />
-                {isUploading ? "저장 중..." : "클라우드에 저장"}
+                {isUploading ? "생성 중..." : "URL 생성"}
               </Button>
             ) : (
               <div className="space-y-2">
@@ -144,16 +144,16 @@ export function CloudSyncModal({
           <div className="border-t pt-4 space-y-3">
             <h3 className="text-lg font-medium flex items-center gap-2">
               <Download className="w-4 h-4" />
-              컬렉션 불러오기
+              URL 불러오기
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              클라우드 URL을 입력하여 컬렉션을 불러옵니다.
+              URL을 입력하여 컬렉션을 불러옵니다.
             </p>
             
             <div className="space-y-2">
               <Input
                 type="url"
-                placeholder="클라우드 URL을 입력하세요..."
+                placeholder="URL을 입력하세요..."
                 value={inputUrl}
                 onChange={(e) => setInputUrl(e.target.value)}
                 className="w-full"

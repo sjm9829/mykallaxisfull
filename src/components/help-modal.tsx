@@ -46,8 +46,8 @@ export function HelpModal({ onClose }: HelpModalProps) {
         },
         {
           icon: <Cloud className="w-4 h-4" />,
-          title: "클라우드 동기화",
-          description: "컬렉션을 클라우드에 저장하거나 다른 기기에서 불러올 수 있습니다."
+          title: "URL 공유",
+          description: "URL을 생성하여 컬렉션을 공유할 수 있습니다."
         }
       ]
     },

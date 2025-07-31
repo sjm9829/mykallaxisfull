@@ -7,10 +7,11 @@ import { AlbumDetailModal } from "@/components/album-detail-modal";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import type { Album, AlbumType } from "@/types/album";
 import { saveFile, verifyPermission } from '@/lib/file-system';
+import { getActiveCloudFile, saveToCloudFile, isUsingCloudStorage, getStorageTypeDisplay } from '@/lib/cloud-storage';
 import { getCollectionMetadata, setCollectionMetadata, getFileHandleFromUser, getActiveFileHandle } from '@/lib/db';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { Plus, Settings, Search, ArrowUp, ArrowDown, Share2, Cloud, FileSpreadsheet, LogOut } from 'lucide-react';
+import { Plus, Settings, Search, ArrowUp, ArrowDown, Share2, Cloud, FileSpreadsheet, LogOut, User } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +28,7 @@ import { DiscogsTokenSettings } from "@/components/discogs-token-settings";
 import { encryptData, decryptData } from '@/lib/crypto';
 
 import { ShareCollectionModal } from '@/components/share-collection-modal';
+import { CollectionSettingsModal } from '@/components/collection-settings-modal';
 import { LoadFromGistModal } from '@/components/load-from-gist-modal';
 import { CloudSyncModal } from '@/components/cloud-sync-modal';
 import { ExcelSyncModal } from '@/components/excel-sync-modal';
@@ -55,6 +57,7 @@ export default function CollectionClientPage() {
     const [showExcelSyncModal, setShowExcelSyncModal] = useState(false); // 엑셀 동기화 모달 상태
     const [showHelpModal, setShowHelpModal] = useState(false); // 도움말 모달 상태
     const [showPriceSummaryModal, setShowPriceSummaryModal] = useState(false); // 가격 요약 모달 상태
+    const [showCollectionSettings, setShowCollectionSettings] = useState(false); // 컬렉션 설정 모달 상태
 
 
     // 필터, 정렬, 검색 상태
@@ -69,6 +72,7 @@ export default function CollectionClientPage() {
 
     const formModalRef = useModalAccessibility(() => { setShowForm(false); setEditingAlbum(null); });
     const discogsSettingsModalRef = useModalAccessibility(() => { setShowDiscogsTokenSettings(false); });
+    const collectionSettingsModalRef = useModalAccessibility(() => { setShowCollectionSettings(false); });
 
     const loadFileContent = useCallback(async (handle: FileSystemFileHandle, expectedUsername: string, expectedCollectionName: string) => {
         console.log("Loading collection:", expectedUsername, expectedCollectionName);
@@ -108,8 +112,8 @@ export default function CollectionClientPage() {
             return;
         }
 
-        const fileUsername = parsedContent._metadata?.username || '';
-        const fileCollectionName = parsedContent._metadata?.collectionName || handle.name.replace('.json', '');
+        const fileUsername = parsedContent._metadata?.username || searchParams.get('username') || '';
+        const fileCollectionName = parsedContent._metadata?.collectionName || searchParams.get('collectionName') || handle.name.replace('.json', '');
 
         if (fileUsername !== expectedUsername || fileCollectionName !== expectedCollectionName) {
             toast.error("선택된 파일이 요청된 컬렉션과 일치하지 않습니다.");
@@ -154,18 +158,120 @@ export default function CollectionClientPage() {
         
     }, [router]);
 
+    const loadCloudFileContent = useCallback(async (expectedUsername: string, expectedCollectionName: string) => {
+        console.log("Loading cloud collection:", expectedUsername, expectedCollectionName);
+
+        if (!expectedUsername || !expectedCollectionName) {
+            setIsLoading(false);
+            router.push('/');
+            return;
+        }
+
+        try {
+            const cloudFile = getActiveCloudFile();
+            if (!cloudFile) {
+                console.error("No active cloud file found");
+                setIsLoading(false);
+                router.push('/');
+                return;
+            }
+
+            setUsername(expectedUsername);
+            setFileName(`${expectedCollectionName}.json`);
+
+            // 실제로 클라우드에서 파일 내용 다운로드
+            const { loadFromCloudFile } = await import('@/lib/cloud-storage');
+            const fileContent = await loadFromCloudFile(cloudFile);
+            
+            console.log("Downloaded cloud file content:", fileContent);
+
+            let parsedContent;
+            try {
+                parsedContent = JSON.parse(fileContent);
+                console.log("Parsed cloud file content:", parsedContent);
+            } catch (e) {
+                console.error("Error parsing cloud file:", e);
+                toast.error("클라우드 파일이 유효한 JSON 형식이 아닙니다.");
+                router.push('/');
+                return;
+            }
+
+            // 메타데이터 확인 및 검증
+            const fileUsername = parsedContent._metadata?.username || expectedUsername;
+            const fileCollectionName = parsedContent._metadata?.collectionName || expectedCollectionName;
+
+            console.log("File metadata:", {
+                fileUsername,
+                fileCollectionName,
+                expectedUsername,
+                expectedCollectionName
+            });
+
+            // 실제 값으로 username과 fileName 설정
+            setUsername(fileUsername);
+            setFileName(`${fileCollectionName}.json`);
+
+            // 메타데이터가 없거나 일치하지 않으면 경고만 하고 계속 진행
+            if (!parsedContent._metadata?.username || !parsedContent._metadata?.collectionName) {
+                console.warn("Cloud file missing metadata, using URL parameters");
+                toast.warn("파일 메타데이터가 부족합니다. URL 파라미터를 사용합니다.");
+            }
+
+            const albumsToSet = parsedContent.albums && Array.isArray(parsedContent.albums) ? parsedContent.albums : [];
+            console.log("Albums to set from cloud:", albumsToSet);
+            setAlbums(albumsToSet);
+
+            // Update albumCount in IndexedDB if it's different
+            const metadata = await getCollectionMetadata(expectedUsername, expectedCollectionName);
+            if (metadata && albumsToSet.length !== metadata.albumCount) {
+                await setCollectionMetadata(expectedUsername, expectedCollectionName, albumsToSet.length);
+            }
+
+            if (parsedContent._metadata?.encryptedDiscogsToken) {
+                try {
+                    const decrypted = await decryptData(
+                        parsedContent._metadata.encryptedDiscogsToken.encryptedData,
+                        parsedContent._metadata.encryptedDiscogsToken.iv,
+                        parsedContent._metadata.encryptedDiscogsToken.salt
+                    );
+                    setDiscogsToken(decrypted);
+                } catch (decryptError) {
+                    console.error("Error decrypting Discogs token:", decryptError);
+                    toast.error("Discogs 토큰 복호화에 실패했습니다.");
+                }
+            }
+
+        } catch (error) {
+            console.error("Error loading cloud file:", error);
+            setAlbums([]);
+            toast.error(`클라우드 파일을 읽는 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+            setIsLoading(false);
+            router.push('/');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [router]);
+
     useEffect(() => {
         const currentUsername = searchParams.get('username');
         const currentCollectionName = searchParams.get('collectionName');
 
         const initializeCollection = async () => {
             if (currentUsername && currentCollectionName) {
+                // 먼저 로컬 파일 핸들 확인
                 const activeHandle = await getActiveFileHandle();
                 if (activeHandle) {
                     setFileHandle(activeHandle);
                     await loadFileContent(activeHandle, currentUsername, currentCollectionName);
                 } else {
-                    setIsLoading(false); // No active handle, show file selection
+                    // 로컬 파일이 없으면 클라우드 파일 확인
+                    const cloudFile = getActiveCloudFile();
+                    if (cloudFile) {
+                        // 클라우드 파일이 있으면 직접 로드
+                        await loadCloudFileContent(currentUsername, currentCollectionName);
+                    } else {
+                        setIsLoading(false); // No active handle or cloud file, show file selection
+                    }
                 }
             } else {
                 setIsLoading(false); // Missing URL params, show file selection
@@ -173,11 +279,135 @@ export default function CollectionClientPage() {
         };
 
         initializeCollection();
-    }, [searchParams, loadFileContent]);
+    }, [searchParams, loadFileContent, loadCloudFileContent]);
+
+    // 컬렉션 설정 저장 함수
+    const handleCollectionSettingsSave = useCallback(async (newUsername: string, newCollectionName: string) => {
+        const oldUsername = username;
+        const oldCollectionName = fileName.replace('.json', '');
+        
+        // 상태 업데이트
+        setUsername(newUsername);
+        setFileName(`${newCollectionName}.json`);
+        
+        // URL 업데이트
+        const newUrl = `/collection?username=${encodeURIComponent(newUsername)}&collectionName=${encodeURIComponent(newCollectionName)}`;
+        router.replace(newUrl);
+        
+        // localStorage 업데이트
+        localStorage.setItem('currentUsername', newUsername);
+        
+        try {
+            // 메타데이터 업데이트
+            await setCollectionMetadata(newUsername, newCollectionName, albums.length);
+            
+            // 앨범과 함께 새로운 메타데이터로 저장하는 로직을 직접 구현
+            const cloudFile = getActiveCloudFile();
+            
+            if (cloudFile) {
+                // 클라우드 저장
+                const contentToSave = {
+                    _metadata: {
+                        username: newUsername,
+                        collectionName: newCollectionName,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    },
+                    albums: albums
+                };
+
+                if (discogsToken) {
+                    const encrypted = await encryptData(discogsToken);
+                    contentToSave._metadata.encryptedDiscogsToken = encrypted;
+                }
+
+                await saveToCloudFile(cloudFile, JSON.stringify(contentToSave, null, 2));
+            } else if (fileHandle) {
+                // 로컬 저장
+                const permissionGranted = await verifyPermission(fileHandle, false);
+                if (permissionGranted) {
+                    const contentToSave = {
+                        _metadata: {
+                            username: newUsername,
+                            collectionName: newCollectionName,
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString()
+                        },
+                        albums: albums
+                    };
+
+                    if (discogsToken) {
+                        const encrypted = await encryptData(discogsToken);
+                        contentToSave._metadata.encryptedDiscogsToken = encrypted;
+                    }
+
+                    await saveFile(fileHandle, JSON.stringify(contentToSave, null, 2));
+                }
+            }
+            
+            toast.success('컬렉션 설정이 저장되었습니다.');
+        } catch (error) {
+            console.error('컬렉션 설정 저장 실패:', error);
+            toast.error('컬렉션 설정 저장에 실패했습니다.');
+            
+            // 실패 시 원래 값으로 롤백
+            setUsername(oldUsername);
+            setFileName(`${oldCollectionName}.json`);
+            const rollbackUrl = `/collection?username=${encodeURIComponent(oldUsername)}&collectionName=${encodeURIComponent(oldCollectionName)}`;
+            router.replace(rollbackUrl);
+        }
+    }, [username, fileName, albums, discogsToken, router, fileHandle]);
 
     
 
     const saveAlbumsToFile = useCallback(async (updatedAlbums: Album[], currentDiscogsToken: string | null) => {
+        const cloudFile = getActiveCloudFile();
+        
+        // 클라우드 저장소 사용 중인 경우
+        if (cloudFile) {
+            try {
+                // URL 파라미터에서 실제 값 가져오기
+                const currentUsername = searchParams.get('username') || username || '';
+                const currentCollectionName = searchParams.get('collectionName') || fileName.replace(".json", "") || 'untitled';
+                
+                const contentToSave: { 
+                    _metadata: { 
+                        username: string; 
+                        collectionName: string; 
+                        createdAt: string;
+                        updatedAt: string;
+                        encryptedDiscogsToken?: { encryptedData: string; iv: string; salt: string; } 
+                    }, 
+                    albums: Album[] 
+                } = {
+                    _metadata: { 
+                        username: currentUsername,
+                        collectionName: currentCollectionName,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    },
+                    albums: updatedAlbums,
+                };
+                
+                if (currentDiscogsToken) {
+                    const encryptedToken = await encryptData(currentDiscogsToken);
+                    contentToSave._metadata.encryptedDiscogsToken = encryptedToken;
+                }
+                
+                console.log("Saving to cloud with metadata:", contentToSave._metadata);
+                console.log("Albums count:", updatedAlbums.length);
+                
+                await saveToCloudFile(cloudFile, JSON.stringify(contentToSave, null, 2));
+                await setCollectionMetadata(username, fileName.replace(".json", ""), updatedAlbums.length);
+                toast.success(`${getStorageTypeDisplay()}에 저장되었습니다.`);
+            } catch (error) {
+                console.error("Failed to save to cloud:", error);
+                toast.error(`클라우드 저장에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+            }
+            return;
+        }
+        
+        // 로컬 파일 저장 (기존 로직)
         if (!fileHandle) return;
 
         let permissionGranted = hasPermission;
@@ -188,8 +418,26 @@ export default function CollectionClientPage() {
 
         if (permissionGranted) {
             try {
-                const contentToSave: { _metadata: { username: string; collectionName: string; encryptedDiscogsToken?: { encryptedData: string; iv: string; salt: string; } }, albums: Album[] } = {
-                    _metadata: { username: username, collectionName: fileName.replace(".json", "") },
+                // URL 파라미터에서 실제 값 가져오기
+                const currentUsername = searchParams.get('username') || username || '';
+                const currentCollectionName = searchParams.get('collectionName') || fileName.replace(".json", "") || 'untitled';
+                
+                const contentToSave: { 
+                    _metadata: { 
+                        username: string; 
+                        collectionName: string; 
+                        createdAt: string;
+                        updatedAt: string;
+                        encryptedDiscogsToken?: { encryptedData: string; iv: string; salt: string; } 
+                    }, 
+                    albums: Album[] 
+                } = {
+                    _metadata: { 
+                        username: currentUsername,
+                        collectionName: currentCollectionName,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    },
                     albums: updatedAlbums,
                 };
                 if (currentDiscogsToken) {
@@ -198,7 +446,7 @@ export default function CollectionClientPage() {
                 }
                 await saveFile(fileHandle, JSON.stringify(contentToSave, null, 2));
                 await setCollectionMetadata(username, fileName.replace(".json", ""), updatedAlbums.length);
-                
+                toast.success("로컬 파일에 저장되었습니다.");
             } catch (error) {
                 console.error("Failed to save file:", error);
                 toast.error("파일 저장에 실패했습니다.");
@@ -445,7 +693,7 @@ export default function CollectionClientPage() {
         );
     }
 
-    if (!fileHandle) {
+    if (!fileHandle && !getActiveCloudFile()) {
         return (
             <div className="flex flex-col items-center justify-center h-screen text-zinc-500 dark:text-zinc-400">
                 <p className="text-lg mb-4">컬렉션 파일을 선택해주세요.</p>
@@ -477,8 +725,25 @@ export default function CollectionClientPage() {
                                 <p className="text-lg font-normal text-zinc-500 dark:text-zinc-400">
                                     총 {filteredAndSortedAlbums.length}장의 음반
                                 </p>
+                                <span className="text-zinc-400 dark:text-zinc-500">•</span>
+                                <p className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                                    {isUsingCloudStorage() ? (
+                                        <>
+                                            <Cloud className="h-3 w-3" />
+                                            {getStorageTypeDisplay()}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2v8h10V6H5z" clipRule="evenodd" />
+                                            </svg>
+                                            로컬 파일
+                                        </>
+                                    )}
+                                </p>
                                 {priceSummary.totalWithPrice > 0 && (
                                     <>
+                                        <span className="text-zinc-400 dark:text-zinc-500">•</span>
                                         <button
                                             onClick={() => setShowPriceSummaryModal(true)}
                                             className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors"
@@ -548,14 +813,17 @@ export default function CollectionClientPage() {
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setShowCloudSyncModal(true)}>
                                         <Cloud className="mr-2 h-4 w-4" />
-                                        클라우드 동기화
+                                        URL 공유
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setShowDiscogsTokenSettings(true)}>
                                         <Settings className="mr-2 h-4 w-4" />
                                         Discogs 토큰 설정
                                     </DropdownMenuItem>
-                                    
-                                <DropdownMenuItem onClick={() => router.push('/')}>
+                                    <DropdownMenuItem onClick={() => setShowCollectionSettings(true)}>
+                                        <User className="mr-2 h-4 w-4" />
+                                        컬렉션 설정
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => router.push('/')}>
                                         <LogOut className="mr-2 h-4 w-4" />
                                         나가기
                                     </DropdownMenuItem>
@@ -791,6 +1059,16 @@ export default function CollectionClientPage() {
                     <p>새 앨범을 컬렉션에 추가합니다</p>
                 </TooltipContent>
             </Tooltip>
+
+            {/* 컬렉션 설정 모달 */}
+            <CollectionSettingsModal
+                isOpen={showCollectionSettings}
+                onClose={() => setShowCollectionSettings(false)}
+                currentUsername={username}
+                currentCollectionName={fileName.replace('.json', '')}
+                onSave={handleCollectionSettingsSave}
+                isCloudCollection={isUsingCloudStorage()}
+            />
         </TooltipProvider>
     );
 }
