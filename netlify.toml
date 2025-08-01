@@ -32,3 +32,11 @@
 [[edge_functions]]
   path = "/api/image-proxy"
   function = "image-proxy"
+
+[[edge_functions]]
+  path = "/api/auth/dropbox/token"
+  function = "dropbox-token"
+
+[[edge_functions]]
+  path = "/api/auth/google/token"
+  function = "google-token"

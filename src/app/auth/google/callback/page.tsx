@@ -14,7 +14,7 @@ function GoogleCallbackContent() {
     const getParentOrigin = () => {
       try {
         return window.opener?.location.origin || '*';
-      } catch (e) {
+      } catch {
         // Cross-origin 접근 불가 시 와일드카드 사용
         return '*';
       }

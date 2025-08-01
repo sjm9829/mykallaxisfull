@@ -52,7 +52,7 @@ export class GoogleDriveService implements StorageService {
               isResolved = true;
               reject(new Error('사용자가 인증을 취소했습니다.'));
             }
-          } catch (error) {
+          } catch {
             // Cross-Origin-Opener-Policy로 인한 에러는 무시
             console.log('🔍 Cannot check popup.closed due to COOP policy - this is normal for Google OAuth');
           }
