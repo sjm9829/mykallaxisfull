@@ -184,22 +184,38 @@ export class GoogleDriveService implements StorageService {
     }
   }
 
-  async getFile(fileId: string): Promise<string> {
+  async getFile(fileId: string, forceRefresh: boolean = false): Promise<string> {
     if (!this.accessToken) {
       throw new AuthenticationError('Google Drive');
     }
 
     try {
+      const requestBody: {
+        action: string;
+        data: { fileId: string; timestamp?: number };
+        accessToken: string;
+      } = {
+        action: 'download_file',
+        data: { fileId },
+        accessToken: this.accessToken
+      };
+
+      // 강제 새로고침이 요청된 경우 캐시 방지 파라미터 추가
+      if (forceRefresh) {
+        requestBody.data.timestamp = Date.now();
+      }
+
       const response = await fetch('/api/google/proxy', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(forceRefresh && {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          })
         },
-        body: JSON.stringify({
-          action: 'download_file',
-          data: { fileId },
-          accessToken: this.accessToken
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {

@@ -154,22 +154,36 @@ export class DropboxService implements StorageService {
     }
   }
 
-  async getFile(fileId: string): Promise<string> {
+  async getFile(fileId: string, forceRefresh: boolean = false): Promise<string> {
     if (!this.accessToken) {
       throw new AuthenticationError('Dropbox');
     }
 
     try {
+      const requestBody: {
+        action: string;
+        data: { path: string; timestamp?: number };
+        accessToken: string;
+      } = {
+        action: 'download_file',
+        data: { path: fileId },
+        accessToken: this.accessToken
+      };
+
+      // 강제 새로고침이거나 기본적으로 캐시 방지를 위한 타임스탬프 추가
+      if (forceRefresh || true) { // 항상 캐시 방지
+        requestBody.data.timestamp = Date.now();
+      }
+
       const response = await fetch('/api/dropbox/proxy', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         },
-        body: JSON.stringify({
-          action: 'download_file',
-          data: { path: fileId },
-          accessToken: this.accessToken
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {

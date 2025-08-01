@@ -170,9 +170,9 @@ export default function CollectionClientPage() {
             setUsername(expectedUsername);
             setFileName(`${expectedCollectionName}.json`);
 
-            // 실제로 클라우드에서 파일 내용 다운로드
+            // 실제로 클라우드에서 파일 내용 다운로드 (강제 새로고침)
             const { loadFromCloudFile } = await import('@/lib/cloud-storage');
-            const fileContent = await loadFromCloudFile(cloudFile);
+            const fileContent = await loadFromCloudFile(cloudFile, true); // 강제 새로고침 활성화
             
             let parsedContent;
             try {

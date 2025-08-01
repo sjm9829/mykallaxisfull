@@ -46,7 +46,7 @@ export async function saveToCloudFile(cloudFile: CloudFileInfo, content: string)
   await service.saveFile(cloudFile.fileId, content);
 }
 
-export async function loadFromCloudFile(cloudFile: CloudFileInfo): Promise<string> {
+export async function loadFromCloudFile(cloudFile: CloudFileInfo, forceRefresh: boolean = false): Promise<string> {
   const service = storageManager.getService(cloudFile.provider);
   if (!service) {
     throw new Error(`${cloudFile.provider} 서비스를 찾을 수 없습니다.`);
@@ -65,7 +65,8 @@ export async function loadFromCloudFile(cloudFile: CloudFileInfo): Promise<strin
     (service as { accessToken?: string }).accessToken = connection.accessToken;
   }
 
-  const content = await service.getFile(cloudFile.fileId);
+  // 강제 새로고침 옵션을 서비스에 전달
+  const content = await service.getFile(cloudFile.fileId, forceRefresh);
   
   return content;
 }

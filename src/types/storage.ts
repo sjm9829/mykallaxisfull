@@ -22,7 +22,7 @@ export interface CloudFile {
 export interface StorageService {
   authenticate(): Promise<StorageConnection>;
   listFiles(path?: string): Promise<CloudFile[]>;
-  getFile(fileId: string): Promise<string>;
+  getFile(fileId: string, forceRefresh?: boolean): Promise<string>;
   saveFile(fileId: string, content: string): Promise<void>;
   createFile(name: string, content: string, path?: string): Promise<CloudFile>;
   deleteFile(fileId: string): Promise<void>;
