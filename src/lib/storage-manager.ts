@@ -31,9 +31,7 @@ export class StorageManager {
       throw new Error(`Unsupported provider: ${provider}`);
     }
 
-    console.log('🔍 Connecting to provider:', provider);
     const connection = await service.authenticate();
-    console.log('🔍 Connection established:', connection);
     
     this.activeConnection = connection;
     

@@ -137,7 +137,6 @@ export function PriceSummaryModal({ summary, onClose }: PriceSummaryModalProps) 
   // 모달 외부 클릭 처리
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
-      console.log("Modal overlay clicked!");
       onClose();
     }
   };

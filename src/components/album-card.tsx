@@ -38,7 +38,7 @@ export function AlbumCard({ album, onClick, onDelete }: AlbumCardProps) {
 
   return (
     <div
-      className="relative bg-white dark:bg-zinc-900 rounded-lg shadow p-4 flex flex-col items-center gap-2 border border-zinc-200 dark:border-zinc-800 cursor-pointer transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-blue-400 hover:opacity-95 min-h-[200px]"
+      className="relative bg-white dark:bg-zinc-900 rounded-lg shadow p-4 flex flex-col items-center gap-2 border border-zinc-200 dark:border-zinc-800 cursor-pointer transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-2xl focus:outline-none focus:shadow-lg focus:border-zinc-300 dark:focus:border-zinc-600 hover:opacity-95 min-h-[200px]"
       onClick={onClick}
       tabIndex={0}
       role="button"
@@ -63,10 +63,9 @@ export function AlbumCard({ album, onClick, onDelete }: AlbumCardProps) {
             <Image
               src={primaryImageUrl}
               alt={album.title}
-              width={128}
-              height={128}
-              className={`transition-opacity duration-300 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
-              style={{ objectFit: 'cover' }}
+              fill
+              sizes="128px"
+              className={`transition-opacity duration-300 object-cover ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
               onLoad={handleImageLoad}
               onError={handleImageError}
               loading="eager" // lazy에서 eager로 변경하여 즉시 로딩

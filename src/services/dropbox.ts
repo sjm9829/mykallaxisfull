@@ -16,10 +16,6 @@ export class DropboxService implements StorageService {
   private readonly redirectUri = process.env.NEXT_PUBLIC_DROPBOX_REDIRECT_URI;
 
   async authenticate(): Promise<StorageConnection> {
-    console.log('🔍 Dropbox authenticate started');
-    console.log('🔍 Client ID:', this.clientId ? 'Present' : 'Missing');
-    console.log('🔍 Redirect URI:', this.redirectUri ? 'Present' : 'Missing');
-
     if (!this.clientId || !this.redirectUri) {
       const error = createEnvironmentError('Dropbox', [
         'NEXT_PUBLIC_DROPBOX_CLIENT_ID',
@@ -32,7 +28,6 @@ export class DropboxService implements StorageService {
     try {
       // OAuth 2.0 flow
       const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${this.clientId}&redirect_uri=${encodeURIComponent(this.redirectUri)}&response_type=code&token_access_type=offline`;
-      console.log('🔍 Opening popup with URL:', authUrl);
 
       // Open popup window for authentication
       const popup = window.open(authUrl, 'dropbox-auth', 'width=500,height=600');
@@ -41,14 +36,11 @@ export class DropboxService implements StorageService {
         throw new Error('팝업이 차단되었습니다. 팝업 차단을 해제하고 다시 시도해주세요.');
       }
 
-      console.log('🔍 Popup opened, waiting for callback...');
-
       return new Promise((resolve, reject) => {
         let isResolved = false;
 
         const checkClosed = setInterval(() => {
           if (popup?.closed && !isResolved) {
-            console.log('🔍 Popup was closed by user');
             clearInterval(checkClosed);
             isResolved = true;
             reject(new Error('사용자가 인증을 취소했습니다.'));
@@ -57,10 +49,6 @@ export class DropboxService implements StorageService {
 
         // Listen for message from popup
         const messageHandler = (event: MessageEvent) => {
-          console.log('🔍 Received message:', event);
-          console.log('🔍 Message origin:', event.origin);
-          console.log('🔍 Current origin:', window.location.origin);
-
           // Origin check - be more flexible for development
           const validOrigins = [
             window.location.origin,
@@ -75,7 +63,6 @@ export class DropboxService implements StorageService {
           }
 
           if (event.data.type === 'DROPBOX_AUTH_SUCCESS') {
-            console.log('🔍 Authentication successful');
             clearInterval(checkClosed);
             popup?.close();
             window.removeEventListener('message', messageHandler);
@@ -125,8 +112,6 @@ export class DropboxService implements StorageService {
       throw new AuthenticationError('Dropbox');
     }
 
-    console.log('🔍 Dropbox listFiles called with path:', path, 'token:', this.accessToken ? 'Token exists' : 'No token');
-
     try {
       const response = await fetch('/api/dropbox/proxy', {
         method: 'POST',
@@ -139,8 +124,6 @@ export class DropboxService implements StorageService {
           accessToken: this.accessToken
         })
       });
-
-      console.log('🔍 Dropbox API response status:', response.status);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -149,19 +132,10 @@ export class DropboxService implements StorageService {
       }
 
       const data = await response.json();
-      console.log('🔍 Dropbox API response data:', data);
-      console.log('🔍 Total entries found:', data.entries?.length || 0);
       
       if (data.entries) {
         const allFiles = data.entries.filter((entry: DropboxEntry) => entry['.tag'] === 'file');
         const jsonFiles = allFiles.filter((entry: DropboxEntry) => entry.name.endsWith('.json'));
-        
-        console.log('🔍 All files:', allFiles.map((f: DropboxEntry) => f.name));
-        console.log('🔍 JSON files:', jsonFiles.map((f: DropboxEntry) => f.name));
-        
-        // 폴더도 보여주기 (디버깅용)
-        const folders = data.entries.filter((entry: DropboxEntry) => entry['.tag'] === 'folder');
-        console.log('🔍 Folders found:', folders.map((f: DropboxEntry) => f.name));
         
         return jsonFiles.map((entry: DropboxEntry) => ({
           id: entry.path_display, // Use path_display as ID for downloads
@@ -173,7 +147,6 @@ export class DropboxService implements StorageService {
         }));
       }
       
-      console.log('🔍 No entries found in response');
       return [];
     } catch (error) {
       console.error('🔍 Dropbox listFiles error:', error);

@@ -7,10 +7,6 @@ export class GoogleDriveService implements StorageService {
   private readonly redirectUri = process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI;
 
   async authenticate(): Promise<StorageConnection> {
-    console.log('🔍 Google Drive authenticate started');
-    console.log('🔍 Client ID:', this.clientId ? 'Present' : 'Missing');
-    console.log('🔍 Redirect URI:', this.redirectUri ? 'Present' : 'Missing');
-
     if (!this.clientId || !this.redirectUri) {
       const error = createEnvironmentError('Google Drive', [
         'NEXT_PUBLIC_GOOGLE_CLIENT_ID',
@@ -23,7 +19,6 @@ export class GoogleDriveService implements StorageService {
     try {
       // OAuth 2.0 flow
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${this.clientId}&redirect_uri=${encodeURIComponent(this.redirectUri)}&response_type=code&scope=${encodeURIComponent('https://www.googleapis.com/auth/drive.file')}&access_type=offline&prompt=consent`;
-      console.log('🔍 Opening popup with URL:', authUrl);
 
       // Open popup window for authentication
       const popup = window.open(authUrl, 'google-auth', 'width=500,height=600');

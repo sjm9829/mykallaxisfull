@@ -38,7 +38,6 @@ export function VirtualizedAlbumGrid({
       (entries) => {
         const target = entries[0];
         if (target.isIntersecting && maxLoadedPage < totalPages - 1) {
-          console.log(`Loading page ${maxLoadedPage + 1}/${totalPages - 1}`); // 디버깅용 로그
           const nextPage = maxLoadedPage + 1;
           setLoadedPages(prev => new Set([...prev, nextPage]));
         }
@@ -87,9 +86,9 @@ export function VirtualizedAlbumGrid({
   return (
     <div
       ref={containerRef}
-      className="max-h-[80vh] overflow-y-auto"
+      className="max-h-[80vh] overflow-y-auto overflow-x-hidden p-2 custom-scrollbar"
     >
-      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 w-full">
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 w-full p-2">
         {visibleAlbums.map((album) => (
           <AlbumCard
             key={album.id}
@@ -141,7 +140,7 @@ export function AlbumGrid({ albums, onAlbumClick, onEditAlbum, onDeleteAlbum }: 
     }
 
     return (
-      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 w-full">
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 w-full p-2">
         {albums.map((album) => (
           <AlbumCard
             key={album.id}

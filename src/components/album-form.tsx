@@ -3,6 +3,7 @@ import type { Album, AlbumType, Currency, AlbumImage } from "@/types/album";
 import { DiscogsSearchModal, type DiscogsSearchResult } from "./discogs-search-modal";
 import { AlbumImageManager } from "./album-image-manager";
 import { getAllImages } from "@/lib/album-images";
+import { modalManager } from "@/lib/modal-manager";
 
 import { X } from "lucide-react";
 
@@ -32,6 +33,8 @@ interface AlbumFormProps {
 }
 
 export function AlbumForm({ onSubmit, onCancel, initialData, discogsToken, existingStores = [] }: AlbumFormProps) {
+  const modalId = 'album-form-modal';
+  
   const [formData, setFormData] = React.useState({
     artist: initialData?.artist || "",
     title: initialData?.title || "",
@@ -65,24 +68,14 @@ export function AlbumForm({ onSubmit, onCancel, initialData, discogsToken, exist
   const [isThrottling, setIsThrottling] = React.useState(false);
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  // 키보드 이벤트 처리 - Discogs 모달이 열려있을 때는 이벤트 리스너를 등록하지 않음
+  // 모달 매니저를 사용한 ESC 키 처리
   React.useEffect(() => {
-    if (isModalOpen) {
-      // Discogs 모달이 열려있으면 키보드 이벤트 리스너를 등록하지 않음
-      return;
-    }
+    modalManager.pushModal(modalId, onCancel);
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        onCancel();
-      }
+    return () => {
+      modalManager.popModal(modalId);
     };
-
-    document.addEventListener('keydown', handleKeyDown, true);
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [isModalOpen, onCancel]);
+  }, [onCancel]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -257,7 +250,6 @@ export function AlbumForm({ onSubmit, onCancel, initialData, discogsToken, exist
       )}
       <form
         onSubmit={(e) => {
-          console.log("Form onSubmit triggered!");
           e.preventDefault();
         }}
         onKeyDown={(e) => {

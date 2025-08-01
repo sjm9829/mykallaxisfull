@@ -1,6 +1,7 @@
 
 import * as React from 'react';
 import Image from 'next/image';
+import { modalManager } from '@/lib/modal-manager';
 
 export interface DiscogsSearchResult {
   id: number;
@@ -24,17 +25,20 @@ interface DiscogsSearchModalProps {
 
 export function DiscogsSearchModal({ results, onSelect, onClose, isLoading, error }: DiscogsSearchModalProps) {
   const modalRef = React.useRef<HTMLDivElement>(null);
+  const modalId = 'discogs-search-modal';
 
-  // 키보드 이벤트 처리
+  // 모달 매니저를 사용한 ESC 키 처리
+  React.useEffect(() => {
+    modalManager.pushModal(modalId, onClose);
+
+    return () => {
+      modalManager.popModal(modalId);
+    };
+  }, [onClose]);
+
+  // Tab 키 트랩핑 (별도 처리)
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose();
-      }
-      
-      // Tab 키 트랩핑
       if (e.key === 'Tab' && modalRef.current) {
         const focusable = modalRef.current.querySelectorAll<HTMLElement>(
           'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
@@ -52,12 +56,21 @@ export function DiscogsSearchModal({ results, onSelect, onClose, isLoading, erro
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown, true);
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [onClose]);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fadein p-4">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fadein p-4"
+      data-modal="discogs-search"
+      onClick={(e) => {
+        // 배경 클릭시에만 모달 닫기 (모달 컨텐츠 클릭시에는 닫지 않음)
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div className="relative bg-white dark:bg-zinc-800 rounded-xl shadow-xl p-6 w-full max-w-2xl border border-zinc-200 dark:border-zinc-700 max-h-[80vh] flex flex-col" ref={modalRef}>
         <h2 className="text-xl font-bold mb-4">Discogs 검색 결과</h2>
         <button onClick={onClose} className="absolute top-3 right-3 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">&times;</button>

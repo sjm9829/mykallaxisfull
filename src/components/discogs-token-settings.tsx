@@ -34,8 +34,6 @@ export function DiscogsTokenSettings({ onClose, discogsToken, onTokenChange }: D
 
     setIsVerifyingToken(true);
     try {
-      console.log('Sending token verification request...');
-      
       // 먼저 서버 API 시도
       try {
         const response = await fetch('/api/discogs/verify-token', {
@@ -45,8 +43,6 @@ export function DiscogsTokenSettings({ onClose, discogsToken, onTokenChange }: D
           },
           body: JSON.stringify({ token: cleanToken }),
         });
-
-        console.log('Response status:', response.status);
 
         if (response.ok) {
           const result = await response.json();
@@ -60,7 +56,6 @@ export function DiscogsTokenSettings({ onClose, discogsToken, onTokenChange }: D
             return;
           }
         } else if (response.status === 404) {
-          console.log('서버 API가 404로 응답함. Edge Function 배포를 확인하세요.');
           toast.error("서버 API를 찾을 수 없습니다. 관리자에게 문의하세요.");
           return;
         } else {
@@ -69,8 +64,6 @@ export function DiscogsTokenSettings({ onClose, discogsToken, onTokenChange }: D
           return;
         }
       } catch (serverError) {
-        console.log('서버 API 실패:', serverError);
-        
         if (serverError instanceof TypeError && serverError.message.includes('Content Security Policy')) {
           toast.error("보안 정책으로 인해 토큰 검증에 실패했습니다. 서버 설정을 확인하세요.");
           return;
@@ -81,8 +74,6 @@ export function DiscogsTokenSettings({ onClose, discogsToken, onTokenChange }: D
       }
 
       // 서버 API 실패 시 클라이언트에서 직접 Discogs API 호출
-      console.log('클라이언트에서 직접 Discogs API 호출...');
-      
       const directResponse = await fetch('https://api.discogs.com/oauth/identity', {
         headers: {
           'User-Agent': 'MKIF-Collection-App/1.0',
@@ -91,8 +82,7 @@ export function DiscogsTokenSettings({ onClose, discogsToken, onTokenChange }: D
       });
 
       if (directResponse.ok) {
-        const userData = await directResponse.json();
-        console.log('직접 검증 성공:', userData.username);
+        await directResponse.json(); // 성공 응답 확인용
         await onTokenChange(cleanToken);
         toast.success("Discogs 개인 액세스 토큰이 유효하며 저장되었습니다.");
         onClose();

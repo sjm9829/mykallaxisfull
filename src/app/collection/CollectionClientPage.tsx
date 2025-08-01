@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { AlbumGrid } from "@/components/album-grid";
+import { VirtualizedAlbumGrid } from "@/components/virtualized-album-grid";
 import { AlbumForm } from "@/components/album-form";
 import { AlbumDetailModal } from "@/components/album-detail-modal";
 import { ConfirmationModal } from "@/components/confirmation-modal";
@@ -74,8 +74,6 @@ export default function CollectionClientPage() {
     const discogsSettingsModalRef = useModalAccessibility(() => { setShowDiscogsTokenSettings(false); });
 
     const loadFileContent = useCallback(async (handle: FileSystemFileHandle, expectedUsername: string, expectedCollectionName: string) => {
-        console.log("Loading collection:", expectedUsername, expectedCollectionName);
-
         if (!expectedUsername || !expectedCollectionName) {
                 setIsLoading(false); // Added to ensure loading state is cleared
                 router.push('/');
@@ -87,7 +85,6 @@ export default function CollectionClientPage() {
 
         // Verify that the selected file matches the requested collection
         const permission = await verifyPermission(handle, true);
-        console.log("Permission granted:", permission);
         setHasPermission(permission);
 
         if (!permission) {
@@ -99,11 +96,9 @@ export default function CollectionClientPage() {
 
         const file = await handle.getFile();
         const text = await file.text();
-        console.log("Attempting to get file content from handle:", handle);
         let parsedContent;
         try {
             parsedContent = JSON.parse(text);
-            console.log("Parsed file content:", parsedContent);
         } catch (e) {
             console.error("Error parsing file:", e);
             toast.error("선택된 파일이 유효한 JSON 형식이 아닙니다.");
@@ -123,7 +118,6 @@ export default function CollectionClientPage() {
 
         try {
             const albumsToSet = parsedContent.albums && Array.isArray(parsedContent.albums) ? parsedContent.albums : [];
-            console.log("Albums to set:", albumsToSet);
                 setAlbums(albumsToSet);
 
                 // Update albumCount in IndexedDB if it's different
@@ -158,8 +152,6 @@ export default function CollectionClientPage() {
     }, [router, searchParams]);
 
     const loadCloudFileContent = useCallback(async (expectedUsername: string, expectedCollectionName: string) => {
-        console.log("Loading cloud collection:", expectedUsername, expectedCollectionName);
-
         if (!expectedUsername || !expectedCollectionName) {
             setIsLoading(false);
             router.push('/');
@@ -182,12 +174,9 @@ export default function CollectionClientPage() {
             const { loadFromCloudFile } = await import('@/lib/cloud-storage');
             const fileContent = await loadFromCloudFile(cloudFile);
             
-            console.log("Downloaded cloud file content:", fileContent);
-
             let parsedContent;
             try {
                 parsedContent = JSON.parse(fileContent);
-                console.log("Parsed cloud file content:", parsedContent);
             } catch (e) {
                 console.error("Error parsing cloud file:", e);
                 toast.error("클라우드 파일이 유효한 JSON 형식이 아닙니다.");
@@ -198,13 +187,6 @@ export default function CollectionClientPage() {
             // 메타데이터 확인 및 검증
             const fileUsername = parsedContent._metadata?.username || expectedUsername;
             const fileCollectionName = parsedContent._metadata?.collectionName || expectedCollectionName;
-
-            console.log("File metadata:", {
-                fileUsername,
-                fileCollectionName,
-                expectedUsername,
-                expectedCollectionName
-            });
 
             // 실제 값으로 username과 fileName 설정
             setUsername(fileUsername);
@@ -217,7 +199,6 @@ export default function CollectionClientPage() {
             }
 
             const albumsToSet = parsedContent.albums && Array.isArray(parsedContent.albums) ? parsedContent.albums : [];
-            console.log("Albums to set from cloud:", albumsToSet);
             setAlbums(albumsToSet);
 
             // Update albumCount in IndexedDB if it's different
@@ -413,9 +394,6 @@ export default function CollectionClientPage() {
                     const encryptedToken = await encryptData(currentDiscogsToken);
                     contentToSave._metadata.encryptedDiscogsToken = encryptedToken;
                 }
-                
-                console.log("Saving to cloud with metadata:", contentToSave._metadata);
-                console.log("Albums count:", updatedAlbums.length);
                 
                 await saveToCloudFile(cloudFile, JSON.stringify(contentToSave, null, 2));
                 await setCollectionMetadata(username, fileName.replace(".json", ""), updatedAlbums.length);
@@ -734,7 +712,7 @@ export default function CollectionClientPage() {
 
     return (
         <TooltipProvider>
-            <main className="flex min-h-screen flex-col items-center p-8 sm:p-16">
+            <main className="flex min-h-screen flex-col items-center p-8 sm:p-16 custom-scrollbar">
                 <div className="w-full max-w-6xl mt-8">
                     <div className="flex justify-between items-center mb-6">
                         <div className="flex flex-col">
@@ -928,7 +906,7 @@ export default function CollectionClientPage() {
                     )}
 
                     {filteredAndSortedAlbums.length > 0 ? (
-                        <AlbumGrid
+                        <VirtualizedAlbumGrid
             albums={filteredAndSortedAlbums}
             onAlbumClick={handleAlbumClick}
             onEditAlbum={handleEditAlbum}
@@ -950,8 +928,7 @@ export default function CollectionClientPage() {
                 </div>
 
                 { (showForm || editingAlbum) && (
-                    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-fadein"
-                        onClick={() => console.log("Modal overlay clicked!")}>
+                    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-fadein">
                         <div
                       ref={formModalRef}
                       role="dialog"

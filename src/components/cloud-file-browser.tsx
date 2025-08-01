@@ -37,8 +37,6 @@ export function CloudFileBrowser({ provider, onFileSelected, onCreateNew, onClos
         throw new Error('인증 정보가 없습니다. 다시 로그인해주세요.');
       }
       
-      console.log('🔍 Setting token for service:', provider, connection.accessToken ? 'Token exists' : 'No token');
-      
       // 서비스에 토큰 설정
       if (provider === 'dropbox') {
         (service as { accessToken?: string }).accessToken = connection.accessToken;
@@ -84,7 +82,6 @@ export function CloudFileBrowser({ provider, onFileSelected, onCreateNew, onClos
       };
 
       const newFile = await service.createFile(fileName, JSON.stringify(emptyCollection, null, 2), '');
-      console.log('Created new file:', newFile);
       onCreateNew(newFile);
       onClose();
     } catch (error) {

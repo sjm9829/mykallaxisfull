@@ -25,9 +25,6 @@ export function setActiveCloudFile(cloudFile: CloudFileInfo | null): void {
 }
 
 export async function saveToCloudFile(cloudFile: CloudFileInfo, content: string): Promise<void> {
-  console.log('Saving to cloud file:', cloudFile);
-  console.log('Content preview:', content.substring(0, 200) + '...');
-  
   const service = storageManager.getService(cloudFile.provider);
   if (!service) {
     throw new Error(`${cloudFile.provider} 서비스를 찾을 수 없습니다.`);
@@ -47,12 +44,9 @@ export async function saveToCloudFile(cloudFile: CloudFileInfo, content: string)
   }
 
   await service.saveFile(cloudFile.fileId, content);
-  console.log('Successfully saved to cloud');
 }
 
 export async function loadFromCloudFile(cloudFile: CloudFileInfo): Promise<string> {
-  console.log('Loading from cloud file:', cloudFile);
-  
   const service = storageManager.getService(cloudFile.provider);
   if (!service) {
     throw new Error(`${cloudFile.provider} 서비스를 찾을 수 없습니다.`);
@@ -72,7 +66,6 @@ export async function loadFromCloudFile(cloudFile: CloudFileInfo): Promise<strin
   }
 
   const content = await service.getFile(cloudFile.fileId);
-  console.log('Successfully loaded from cloud, content preview:', content.substring(0, 200) + '...');
   
   return content;
 }
