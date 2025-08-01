@@ -40,3 +40,11 @@
 [[edge_functions]]
   path = "/api/auth/google/token"
   function = "google-token"
+
+[[edge_functions]]
+  path = "/api/dropbox/proxy"
+  function = "dropbox-proxy"
+
+[[edge_functions]]
+  path = "/api/google/proxy"
+  function = "google-proxy"
