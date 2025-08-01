@@ -204,7 +204,12 @@ export class DropboxService implements StorageService {
       }
 
       const result = await response.json();
-      return result.content;
+      // 파일명과 함께 반환되는 경우 처리
+      if (result.content) {
+        return result.content;
+      }
+      // 호환성을 위해 기존 방식도 지원
+      return typeof result === 'string' ? result : JSON.stringify(result);
     } catch (error) {
       throw handleAPIError(error, 'Dropbox');
     }

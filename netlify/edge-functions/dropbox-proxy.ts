@@ -73,9 +73,21 @@ export default async (request: Request, context: any) => {
 
         if (response.ok) {
           const content = await response.text();
-          return new Response(JSON.stringify({ content }), {
+          // 파일명 추출 (경로에서 파일명만 가져오기)
+          const fileName = data.path.split('/').pop() || 'collection.json';
+          
+          return new Response(JSON.stringify({ 
+            content,
+            fileName: fileName,
+            contentType: 'application/json'
+          }), {
             status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            headers: { 
+              ...corsHeaders, 
+              'Content-Type': 'application/json',
+              'Content-Disposition': `attachment; filename="${fileName}"`,
+              'X-Content-Type-Options': 'nosniff'
+            }
           });
         }
         break;

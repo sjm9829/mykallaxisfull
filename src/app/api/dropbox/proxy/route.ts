@@ -55,6 +55,24 @@ export async function POST(request: NextRequest) {
               'Dropbox-API-Arg': safeApiArg
             }
           });
+
+          if (response.ok) {
+            const content = await response.text();
+            // 파일명 추출 (경로에서 파일명만 가져오기)
+            const fileName = downloadPath.split('/').pop() || 'collection.json';
+            
+            return NextResponse.json({ 
+              content,
+              fileName: fileName,
+              contentType: 'application/json'
+            }, {
+              headers: {
+                'Content-Disposition': `inline; filename="${fileName}"`,
+                'X-Content-Type-Options': 'nosniff',
+                'Content-Type': 'application/json'
+              }
+            });
+          }
         } catch (error) {
           console.error('Download file error:', error);
           // 영문으로 된 임시 파일명으로 테스트 제안
