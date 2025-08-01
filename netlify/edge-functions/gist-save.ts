@@ -1,11 +1,22 @@
 const handler = async (request: Request) => {
   console.log('Gist Save Edge Function 호출됨');
   
+  // 허용된 도메인 목록 (프로덕션에서는 실제 도메인으로 제한)
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://mykallaxisfull.netlify.app', // 실제 배포 도메인으로 변경 필요
+  ];
+  
+  const origin = request.headers.get('origin') || '';
+  const allowedOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+  
   // CORS 헤더 설정
   const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '86400', // 24시간 캐시
   };
 
   // Preflight 요청 처리

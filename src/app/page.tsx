@@ -1,13 +1,14 @@
 "use client";
 
 import { useRouter } from 'next/navigation';
-import { setCollectionMetadata, getLastOpenedCollection, setLastOpenedCollection, getFileHandleFromUser, setActiveFileHandle } from '@/lib/db';
+import { setCollectionMetadata, getLastOpenedCollection, setLastOpenedCollection, setActiveFileHandle } from '@/lib/db';
 import { useState, useEffect } from 'react';
 import { CreateCollectionModal } from '@/components/create-collection-modal';
 import { StorageConnectionModal } from '@/components/storage-connection-modal';
 import { CloudFileBrowser } from '@/components/cloud-file-browser';
 import { StorageProvider, CloudFile } from '@/types/storage';
 import { storageManager } from '@/lib/storage-manager';
+import { setActiveCloudFile } from '@/lib/cloud-storage';
 
 export default function LandingPage() {
   const router = useRouter();
@@ -55,7 +56,7 @@ export default function LandingPage() {
       if (selectedAction === 'create') {
         setShowCreateCollectionModal(true);
       } else if (selectedAction === 'open') {
-        await handleOpenLocalCollection();
+        await handleOpenLocalFile();
       }
     } else {
       // 클라우드 서비스 방식
@@ -79,6 +80,48 @@ export default function LandingPage() {
       const fileUsername = parsedContent._metadata?.username || localStorage.getItem('currentUsername') || 'user';
       const fileCollectionName = parsedContent._metadata?.collectionName || file.name.replace('.json', '');
       const albumCount = parsedContent.albums?.length || 0;
+
+      console.log('🔍 File metadata:', { 
+        fileUsername, 
+        fileCollectionName, 
+        albumCount,
+        metadata: parsedContent._metadata,
+        rawMetadata: JSON.stringify(parsedContent._metadata, null, 2)
+      });
+
+      // 클라우드 파일 선택 시 로컬 파일 핸들 정리
+      localStorage.removeItem('active-file-handle');
+      // IndexedDB에서도 활성 파일 핸들 제거 (Promise로 완료 대기)
+      await new Promise<void>((resolve) => {
+        try {
+          const request = indexedDB.open('FileSystemHandles', 1);
+          request.onsuccess = () => {
+            const db = request.result;
+            if (db.objectStoreNames.contains('handles')) {
+              const transaction = db.transaction(['handles'], 'readwrite');
+              const store = transaction.objectStore('handles');
+              const clearRequest = store.clear();
+              clearRequest.onsuccess = () => {
+                console.log('🧹 IndexedDB file handles cleared');
+                resolve();
+              };
+              clearRequest.onerror = () => {
+                console.warn('Failed to clear IndexedDB file handles');
+                resolve();
+              };
+            } else {
+              resolve();
+            }
+          };
+          request.onerror = () => {
+            console.warn('Failed to open IndexedDB');
+            resolve();
+          };
+        } catch (error) {
+          console.warn('Failed to clear IndexedDB file handles:', error);
+          resolve();
+        }
+      });
 
       // 컬렉션 메타데이터 저장
       await setCollectionMetadata(fileUsername, fileCollectionName, albumCount);
@@ -108,6 +151,40 @@ export default function LandingPage() {
     const searchParams = new URLSearchParams(window.location.search);
     const currentUsername = searchParams.get('username') || localStorage.getItem('currentUsername') || 'user';
     
+    // 클라우드 파일 생성 시 로컬 파일 핸들 정리
+    localStorage.removeItem('active-file-handle');
+    // IndexedDB에서도 활성 파일 핸들 제거 (Promise로 완료 대기)
+    await new Promise<void>((resolve) => {
+      try {
+        const request = indexedDB.open('FileSystemHandles', 1);
+        request.onsuccess = () => {
+          const db = request.result;
+          if (db.objectStoreNames.contains('handles')) {
+            const transaction = db.transaction(['handles'], 'readwrite');
+            const store = transaction.objectStore('handles');
+            const clearRequest = store.clear();
+            clearRequest.onsuccess = () => {
+              console.log('🧹 IndexedDB file handles cleared');
+              resolve();
+            };
+            clearRequest.onerror = () => {
+              console.warn('Failed to clear IndexedDB file handles');
+              resolve();
+            };
+          } else {
+            resolve();
+          }
+        };
+        request.onerror = () => {
+          console.warn('Failed to open IndexedDB');
+          resolve();
+        };
+      } catch (error) {
+        console.warn('Failed to clear IndexedDB file handles:', error);
+        resolve();
+      }
+    });
+    
     // 새 컬렉션 생성 시에도 메타데이터 저장
     await setCollectionMetadata(currentUsername, collectionName, 0);
     await setLastOpenedCollection(currentUsername, collectionName);
@@ -123,46 +200,53 @@ export default function LandingPage() {
     router.push(`/collection?username=${encodeURIComponent(currentUsername)}&collectionName=${encodeURIComponent(collectionName)}`);
   };
 
-  const handleOpenLocalCollection = async () => {
-    try {
-      const fileHandle = await getFileHandleFromUser();
-      if (!fileHandle) return; // User cancelled
-      
-      const file = await fileHandle.getFile();
-      const text = await file.text();
-      let fileUsername = '';
-      let fileCollectionName = fileHandle.name.replace('.json', '');
-
-      try {
-        const parsedContent = JSON.parse(text);
-        if (parsedContent._metadata && parsedContent._metadata.username) {
-          fileUsername = parsedContent._metadata.username;
-        } else {
-          fileUsername = ''; // 파싱 실패 시 기본값으로 빈 문자열 할당
+      const handleOpenLocalFile = async () => {
+        try {
+          if ('showOpenFilePicker' in window) {
+            const [fileHandle] = await (window as unknown as { 
+              showOpenFilePicker: (options?: { types?: Array<{ description: string; accept: Record<string, string[]> }> }) => Promise<FileSystemFileHandle[]> 
+            }).showOpenFilePicker({
+              types: [{
+                description: 'JSON files',
+                accept: {
+                  'application/json': ['.json'],
+                },
+              }],
+            });
+            
+            // 로컬 파일 선택 시 클라우드 상태 정리
+            setActiveCloudFile(null);
+            localStorage.removeItem('active-cloud-file');
+            console.log('🧹 Local file selected, clearing cloud state');
+            
+            const file = await fileHandle.getFile();
+            const content = await file.text();
+            // 파일 유효성 검사
+            JSON.parse(content);
+            
+            // 파일 핸들을 IndexedDB에 저장
+            await setActiveFileHandle(fileHandle);
+            
+            // localStorage에도 기본 정보 저장
+            localStorage.setItem('active-file-handle', JSON.stringify({
+              name: fileHandle.name,
+              // 실제 핸들은 직렬화할 수 없으므로 별도 관리
+            }));
+            
+            // 컬렉션 페이지로 이동
+            const searchParams = new URLSearchParams(window.location.search);
+            const currentUsername = searchParams.get('username') || localStorage.getItem('currentUsername') || 'user';
+            const collectionName = fileHandle.name.replace('.json', '');
+            
+            await setLastOpenedCollection(currentUsername, collectionName);
+            router.push(`/collection?username=${encodeURIComponent(currentUsername)}&collectionName=${encodeURIComponent(collectionName)}`);
+          } else {
+            throw new Error('파일 시스템 접근이 지원되지 않는 브라우저입니다.');
+          }
+        } catch (error) {
+          console.error('로컬 파일 열기 실패:', error);
         }
-        if (parsedContent._metadata && parsedContent._metadata.collectionName) {
-          fileCollectionName = parsedContent._metadata.collectionName;
-        }
-      } catch (e) {
-        console.error("Error parsing file for username/collectionName:", e);
-        
-      }
-
-      // Update album count from file content
-      const albumCount = JSON.parse(text).albums?.length || 0;
-
-      await setCollectionMetadata(fileUsername, fileCollectionName, albumCount);
-      await setLastOpenedCollection(fileUsername, fileCollectionName);
-      await setActiveFileHandle(fileHandle); // Set active file handle
-      router.push(`/collection?username=${encodeURIComponent(fileUsername)}&collectionName=${encodeURIComponent(fileCollectionName)}`);
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        // User cancelled the file picker, do nothing
-      } else {
-        console.error('Error opening file:', error);
-      }
-    }
-  };
+      };
 
   const handleGoToLastCollection = async () => {
     if (lastOpenedCollection) {

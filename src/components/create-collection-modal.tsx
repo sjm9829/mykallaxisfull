@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { createNewFileHandle, setCollectionMetadata, setLastOpenedCollection, setActiveFileHandle } from '@/lib/db';
+import { setActiveCloudFile } from '@/lib/cloud-storage';
 
 interface CreateCollectionModalProps {
   onClose: () => void;
@@ -42,6 +43,9 @@ export function CreateCollectionModal({
       const writable = await fileHandle.createWritable();
       await writable.write(initialContent);
       await writable.close();
+
+      // 로컬 파일 생성 시 클라우드 파일 정보 정리
+      setActiveCloudFile(null);
 
       await setCollectionMetadata(username, collectionName, 0);
       await setActiveFileHandle(fileHandle);

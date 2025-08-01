@@ -1,4 +1,16 @@
-const ENCRYPTION_KEY_SECRET = "YOUR_SUPER_SECRET_AND_LONG_KEY_HERE_DO_NOT_CHANGE_AFTER_DEPLOYMENT"; // 이 값은 배포 후 변경하지 마세요!
+// 환경 변수에서 암호화 키를 가져오거나, 런타임에 생성
+const ENCRYPTION_KEY_SECRET = process.env.NEXT_PUBLIC_ENCRYPTION_KEY || 
+  (typeof window !== 'undefined' ? 
+    localStorage.getItem('app-encryption-key') || 
+    (() => {
+      // 첫 실행 시 고유 키 생성 및 저장
+      const key = crypto.getRandomValues(new Uint8Array(32));
+      const keyString = Array.from(key, byte => byte.toString(16).padStart(2, '0')).join('');
+      localStorage.setItem('app-encryption-key', keyString);
+      return keyString;
+    })() 
+    : 'DEFAULT_FALLBACK_KEY_FOR_SSR'
+  );
 
 async function getKeyMaterial(password: string): Promise<CryptoKey> {
   const enc = new TextEncoder();

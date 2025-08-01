@@ -7,7 +7,7 @@ import { AlbumDetailModal } from "@/components/album-detail-modal";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import type { Album, AlbumType } from "@/types/album";
 import { saveFile, verifyPermission } from '@/lib/file-system';
-import { getActiveCloudFile, saveToCloudFile, isUsingCloudStorage, getStorageTypeDisplay } from '@/lib/cloud-storage';
+import { getActiveCloudFile, saveToCloudFile, isUsingCloudStorage, getStorageTypeDisplay, setActiveCloudFile } from '@/lib/cloud-storage';
 import { getCollectionMetadata, setCollectionMetadata, getFileHandleFromUser, getActiveFileHandle } from '@/lib/db';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useGlobalLoading } from '@/contexts/LoadingContext';
@@ -109,14 +109,84 @@ export default function CollectionClientPage() {
             return;
         }
 
-        const fileUsername = parsedContent._metadata?.username || searchParams.get('username') || '';
-        const fileCollectionName = parsedContent._metadata?.collectionName || searchParams.get('collectionName') || handle.name.replace('.json', '');
+        // 파일 메타데이터에서 username과 collectionName 추출
+        let fileUsername = parsedContent._metadata?.username;
+        let fileCollectionName = parsedContent._metadata?.collectionName;
+        
+        console.log('🔍 Raw file metadata debug:', {
+            hasMetadata: !!parsedContent._metadata,
+            metadataKeys: parsedContent._metadata ? Object.keys(parsedContent._metadata) : 'no metadata',
+            rawUsername: parsedContent._metadata?.username,
+            rawCollectionName: parsedContent._metadata?.collectionName,
+            fallbackToFilename: handle.name.replace('.json', ''),
+            expectedUsername,
+            expectedCollectionName
+        });
+        
+        // 메타데이터가 없는 경우 URL 파라미터 사용 (완전히 새로운 로컬 파일의 경우)
+        if (!fileUsername) {
+            fileUsername = expectedUsername; // URL에서 온 값을 사용
+            console.log('⚠️ No username in metadata, using URL parameter:', expectedUsername);
+        }
+        if (!fileCollectionName) {
+            fileCollectionName = expectedCollectionName; // URL에서 온 값을 사용  
+            console.log('⚠️ No collectionName in metadata, using URL parameter:', expectedCollectionName);
+        }
 
-        if (fileUsername !== expectedUsername || fileCollectionName !== expectedCollectionName) {
-            toast.error("선택된 파일이 요청된 컬렉션과 일치하지 않습니다.");
-            setIsLoading(false); // Added to ensure loading state is cleared
-            router.push('/');
-            return;
+        console.log('🔍 File validation:', {
+            expectedUsername,
+            expectedCollectionName,
+            fileUsername,
+            fileCollectionName,
+            metadata: parsedContent._metadata,
+            searchParams: {
+                username: searchParams.get('username'),
+                collectionName: searchParams.get('collectionName')
+            },
+            rawComparison: {
+                'fileUsername === expectedUsername': fileUsername === expectedUsername,
+                'fileCollectionName === expectedCollectionName': fileCollectionName === expectedCollectionName,
+                fileUsernameType: typeof fileUsername,
+                expectedUsernameType: typeof expectedUsername,
+                fileCollectionNameType: typeof fileCollectionName,
+                expectedCollectionNameType: typeof expectedCollectionName
+            }
+        });
+
+        // 검증 로직: 메타데이터가 있는 경우 컬렉션명만 확인, username은 유연하게 처리
+        if (parsedContent._metadata?.collectionName) {
+            // 컬렉션명이 일치하지 않는 경우에만 오류
+            if (parsedContent._metadata.collectionName !== expectedCollectionName) {
+                console.error('❌ Collection name validation failed:', {
+                    fileCollectionName: `"${parsedContent._metadata.collectionName}"`, 
+                    expectedCollectionName: `"${expectedCollectionName}"`,
+                    collectionNameMatch: parsedContent._metadata.collectionName === expectedCollectionName
+                });
+                toast.error("선택된 파일이 요청된 컬렉션과 일치하지 않습니다.");
+                setIsLoading(false);
+                router.push('/');
+                return;
+            }
+            
+            // Username이 다른 경우 경고만 출력하고 파일의 username을 사용
+            if (parsedContent._metadata.username && parsedContent._metadata.username !== expectedUsername) {
+                console.warn('⚠️ Username mismatch, using file username:', {
+                    fileUsername: parsedContent._metadata.username,
+                    expectedUsername: expectedUsername
+                });
+                // 파일의 실제 username을 사용하도록 상태 업데이트
+                setUsername(parsedContent._metadata.username);
+                // URL도 파일의 실제 값으로 업데이트
+                const correctedUrl = `/collection?username=${encodeURIComponent(parsedContent._metadata.username)}&collectionName=${encodeURIComponent(expectedCollectionName)}`;
+                router.replace(correctedUrl);
+            }
+        } else {
+            // 메타데이터가 없거나 불완전한 경우 경고만 출력하고 계속 진행
+            console.warn('⚠️ File metadata missing or incomplete, proceeding with URL parameters:', {
+                hasMetadata: !!parsedContent._metadata,
+                hasUsername: !!parsedContent._metadata?.username,
+                hasCollectionName: !!parsedContent._metadata?.collectionName
+            });
         }
 
         try {
@@ -241,22 +311,35 @@ export default function CollectionClientPage() {
 
         const initializeCollection = async () => {
             if (currentUsername && currentCollectionName) {
-                // 먼저 로컬 파일 핸들 확인
-                const activeHandle = await getActiveFileHandle();
-                if (activeHandle) {
-                    setFileHandle(activeHandle);
-                    await loadFileContent(activeHandle, currentUsername, currentCollectionName);
+                console.log('🔄 Initializing collection:', { currentUsername, currentCollectionName });
+                
+                // 먼저 클라우드 파일 확인 (우선순위)
+                const cloudFile = getActiveCloudFile();
+                console.log('☁️ Active cloud file:', cloudFile);
+                
+                if (cloudFile) {
+                    // 클라우드 파일이 있으면 로컬 핸들 정리하고 클라우드 파일 로드
+                    console.log('📁 Using cloud file, clearing local handle');
+                    setActiveCloudFile(cloudFile); // 명시적으로 설정
+                    await loadCloudFileContent(currentUsername, currentCollectionName);
                 } else {
-                    // 로컬 파일이 없으면 클라우드 파일 확인
-                    const cloudFile = getActiveCloudFile();
-                    if (cloudFile) {
-                        // 클라우드 파일이 있으면 직접 로드
-                        await loadCloudFileContent(currentUsername, currentCollectionName);
+                    // 클라우드 파일이 없을 때만 로컬 파일 핸들 확인
+                    const activeHandle = await getActiveFileHandle();
+                    console.log('💾 Active file handle:', activeHandle);
+                    
+                    if (activeHandle) {
+                        // 로컬 파일이 있으면 클라우드 파일 정보 정리
+                        console.log('📁 Using local file, clearing cloud state');
+                        setActiveCloudFile(null);
+                        setFileHandle(activeHandle);
+                        await loadFileContent(activeHandle, currentUsername, currentCollectionName);
                     } else {
+                        console.log('❌ No active handle or cloud file found');
                         setIsLoading(false); // No active handle or cloud file, show file selection
                     }
                 }
             } else {
+                console.log('❌ Missing URL params:', { currentUsername, currentCollectionName });
                 setIsLoading(false); // Missing URL params, show file selection
             }
         };
