@@ -8,6 +8,7 @@ import { X, Download, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { exportAlbumsAsImage } from '@/lib/image-export';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { modalManager } from '@/lib/modal-manager';
 
 interface ShareCollectionModalProps {
   albums: Album[];
@@ -129,16 +130,25 @@ export function ShareCollectionModal({
   const [albums, setAlbums] = React.useState<Album[]>(initialAlbums);
   const [gridSize, setGridSize] = React.useState<string>('5'); // 그리드 크기 상태 추가, 기본값 5x5
   const [isExporting, setIsExporting] = React.useState(false); // 내보내기 로딩 상태
+  
+  const modalId = React.useMemo(() => `share-collection-${Date.now()}`, []);
 
-  // 키보드 이벤트 처리 (로딩 중에는 ESC 키 비활성화)
+  // modalManager 등록
   React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isExporting) {
-        e.preventDefault();
-        e.stopPropagation();
+    modalManager.pushModal(modalId, () => {
+      if (!isExporting) {
         onClose();
       }
-      
+    });
+
+    return () => {
+      modalManager.popModal(modalId);
+    };
+  }, [modalId, onClose, isExporting]);
+
+  // Tab 키 트랩핑만 처리 (ESC는 modalManager가 처리)
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       // Tab 키 트랩핑
       if (e.key === 'Tab' && modalRef.current) {
         const focusable = modalRef.current.querySelectorAll<HTMLElement>(
@@ -159,7 +169,7 @@ export function ShareCollectionModal({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, isExporting]);
+  }, []);
 
   const moveAlbum = React.useCallback((dragIndex: number, hoverIndex: number) => {
     setAlbums((prevAlbums: Album[]) => {

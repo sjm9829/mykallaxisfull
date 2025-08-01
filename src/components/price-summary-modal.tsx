@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { X, Calculator, TrendingUp, PieChart } from 'lucide-react';
+import { modalManager } from '@/lib/modal-manager';
 
 interface PriceSummary {
   totalAlbums: number;
@@ -35,25 +36,62 @@ interface ExchangeRates {
   EUR: number;
 }
 
-// 환율 정보를 가져오는 함수
-const fetchExchangeRates = async (): Promise<ExchangeRates | null> => {
+// 환율 정보를 가져오는 함수 (네이버 환율 API 사용)
+const fetchExchangeRates = async (): Promise<ExchangeRates> => {
   try {
-    // ExchangeRate-API (무료, 제한 있음)를 사용
-    const response = await fetch('https://api.exchangerate-api.com/v4/latest/KRW');
-    if (!response.ok) {
-      throw new Error('환율 정보를 가져올 수 없습니다');
-    }
+    const currencies = ['USD', 'JPY', 'EUR'];
+    const results = await Promise.allSettled(
+      currencies.map(async (currency) => {
+        const response = await fetch(
+          `https://m.search.naver.com/p/csearch/content/qapirender.nhn?key=calculator&pkid=141&q=%ED%99%98%EC%9C%A8&where=m&u1=keb&u6=standardUnit&u7=0&u3=${currency}&u4=KRW&u8=down&u2=1`,
+          {
+            headers: {
+              'Accept': 'application/json',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            },
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${currency} 환율 정보를 가져올 수 없습니다`);
+        }
+        
+        const data = await response.json();
+        
+        // 네이버 API 응답 검증
+        if (!data.country || !Array.isArray(data.country) || data.country.length < 2) {
+          throw new Error(`${currency}: 잘못된 환율 데이터 형식`);
+        }
+        
+        // country[1].value가 KRW 환산 값
+        const krwValue = parseFloat(data.country[1].value.replace(/,/g, ''));
+        if (isNaN(krwValue) || krwValue <= 0) {
+          throw new Error(`${currency}: 유효하지 않은 환율 값`);
+        }
+        
+        return { currency, rate: krwValue };
+      })
+    );
     
-    const data = await response.json();
-    
-    // KRW 기준이므로 역수를 계산하여 다른 통화를 KRW로 환산하는 비율을 구함
-    return {
-      USD: 1 / data.rates.USD, // 1 USD = X KRW
-      JPY: 1 / data.rates.JPY, // 1 JPY = X KRW  
-      EUR: 1 / data.rates.EUR, // 1 EUR = X KRW
+    // 결과 처리
+    const rates: ExchangeRates = {
+      USD: 1300, // 기본값
+      JPY: 9,
+      EUR: 1400,
     };
+    
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        const { currency, rate } = result.value;
+        rates[currency as keyof ExchangeRates] = rate;
+      } else {
+        console.warn(`${currencies[index]} 환율 가져오기 실패:`, result.reason);
+      }
+    });
+    
+    return rates;
   } catch (error) {
-    console.error('환율 정보 가져오기 실패:', error);
+    console.warn('환율 정보 가져오기 실패, 고정 환율 사용:', error);
     // 환율 정보를 가져올 수 없는 경우 대략적인 고정 환율 사용
     return {
       USD: 1300, // 1 USD ≈ 1300 KRW
@@ -81,13 +119,33 @@ const formatCurrency = (amount: number, currency: string) => {
 
 export function PriceSummaryModal({ summary, onClose }: PriceSummaryModalProps) {
   const modalRef = React.useRef<HTMLDivElement>(null);
-  const [exchangeRates, setExchangeRates] = React.useState<ExchangeRates | null>(null);
+  const [exchangeRates, setExchangeRates] = React.useState<ExchangeRates>({
+    USD: 1389, // 네이버에서 가져온 실제 환율 (2025-08-02 기준)
+    JPY: 9.37,
+    EUR: 1605.20,
+  });
+  
+  const modalId = React.useMemo(() => `price-summary-${Date.now()}`, []);
 
-  // 환율 정보 로드
+  // modalManager 등록
+  React.useEffect(() => {
+    modalManager.pushModal(modalId, onClose);
+
+    return () => {
+      modalManager.popModal(modalId);
+    };
+  }, [modalId, onClose]);
+
+  // 환율 정보 로드 (백그라운드에서 실행, 실패해도 기본값 사용)
   React.useEffect(() => {
     const loadExchangeRates = async () => {
-      const rates = await fetchExchangeRates();
-      setExchangeRates(rates);
+      try {
+        const rates = await fetchExchangeRates();
+        setExchangeRates(rates);
+      } catch (error) {
+        console.warn('환율 정보 로딩 실패, 기본값 사용:', error);
+        // 이미 기본값으로 초기화되어 있으므로 별도 처리 불필요
+      }
     };
     
     loadExchangeRates();
@@ -95,7 +153,6 @@ export function PriceSummaryModal({ summary, onClose }: PriceSummaryModalProps) 
 
   // KRW로 환산한 총 지출 계산
   const totalSpentInKRW = React.useMemo(() => {
-    if (!exchangeRates) return summary.totalSpent.KRW;
     
     return summary.totalSpent.KRW + 
            summary.totalSpent.USD * exchangeRates.USD +
@@ -103,15 +160,9 @@ export function PriceSummaryModal({ summary, onClose }: PriceSummaryModalProps) 
            summary.totalSpent.EUR * exchangeRates.EUR;
   }, [summary, exchangeRates]);
 
-  // 키보드 이벤트 처리
+  // Tab 키 트랩핑만 처리 (ESC는 modalManager가 처리)
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose();
-      }
-      
       // Tab 키 트랩핑
       if (e.key === 'Tab' && modalRef.current) {
         const focusable = modalRef.current.querySelectorAll<HTMLElement>(
@@ -132,7 +183,7 @@ export function PriceSummaryModal({ summary, onClose }: PriceSummaryModalProps) 
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, []);
 
   // 모달 외부 클릭 처리
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { X, Settings } from 'lucide-react';
+import { modalManager } from '@/lib/modal-manager';
 
 interface CollectionSettingsModalProps {
   isOpen: boolean;
@@ -23,6 +24,21 @@ export function CollectionSettingsModal({
 }: CollectionSettingsModalProps) {
   const [username, setUsername] = React.useState(currentUsername);
   const [collectionName, setCollectionName] = React.useState(currentCollectionName);
+  
+  const modalId = React.useMemo(() => `collection-settings-${Date.now()}`, []);
+
+  // modalManager 등록
+  React.useEffect(() => {
+    if (isOpen) {
+      modalManager.pushModal(modalId, onClose);
+    }
+
+    return () => {
+      if (isOpen) {
+        modalManager.popModal(modalId);
+      }
+    };
+  }, [isOpen, modalId, onClose]);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -44,9 +60,8 @@ export function CollectionSettingsModal({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleSave();
-    } else if (e.key === 'Escape') {
-      onClose();
     }
+    // ESC 키는 modalManager에서 처리하므로 제거
   };
 
   if (!isOpen) return null;
