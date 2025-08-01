@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { LoadingProvider } from "@/contexts/LoadingContext";
+import { GlobalLoadingOverlay } from "@/components/global-loading-overlay";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,10 +21,13 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className={inter.className}>
-        <ErrorBoundary>
-          {children}
-        </ErrorBoundary>
-        <Toaster />
+        <LoadingProvider>
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
+          <GlobalLoadingOverlay />
+          <Toaster />
+        </LoadingProvider>
       </body>
     </html>
   );

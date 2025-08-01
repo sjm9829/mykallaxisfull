@@ -10,6 +10,7 @@ import { saveFile, verifyPermission } from '@/lib/file-system';
 import { getActiveCloudFile, saveToCloudFile, isUsingCloudStorage, getStorageTypeDisplay } from '@/lib/cloud-storage';
 import { getCollectionMetadata, setCollectionMetadata, getFileHandleFromUser, getActiveFileHandle } from '@/lib/db';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useGlobalLoading } from '@/contexts/LoadingContext';
 
 import { Plus, Settings, Search, ArrowUp, ArrowDown, Share2, Cloud, FileSpreadsheet, LogOut, User } from 'lucide-react';
 import {
@@ -47,6 +48,8 @@ export default function CollectionClientPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
+    
+    const { setGlobalLoading } = useGlobalLoading();
     const [deleteTarget, setDeleteTarget] = useState<Album | null>(null);
     const [editingAlbum, setEditingAlbum] = useState<Album | null>(null);
     const [hasPermission, setHasPermission] = useState(false);
@@ -285,6 +288,8 @@ export default function CollectionClientPage() {
             const cloudFile = getActiveCloudFile();
             
             if (cloudFile) {
+                // 클라우드 저장 시 전역 로딩 표시
+                setGlobalLoading(true, '클라우드에 컬렉션 설정을 저장하는 중...');
                 // 클라우드 저장
                 const contentToSave: {
                     _metadata: {
@@ -311,6 +316,7 @@ export default function CollectionClientPage() {
                 }
 
                 await saveToCloudFile(cloudFile, JSON.stringify(contentToSave, null, 2));
+                setGlobalLoading(false); // 클라우드 저장 완료 후 로딩 해제
             } else if (fileHandle) {
                 // 로컬 저장
                 const permissionGranted = await verifyPermission(fileHandle, false);
@@ -351,13 +357,16 @@ export default function CollectionClientPage() {
             console.error('컬렉션 설정 저장 실패:', error);
             toast.error('컬렉션 설정 저장에 실패했습니다.');
             
+            // 실패 시 로딩 상태 해제
+            setGlobalLoading(false);
+            
             // 실패 시 원래 값으로 롤백
             setUsername(oldUsername);
             setFileName(`${oldCollectionName}.json`);
             const rollbackUrl = `/collection?username=${encodeURIComponent(oldUsername)}&collectionName=${encodeURIComponent(oldCollectionName)}`;
             router.replace(rollbackUrl);
         }
-    }, [username, fileName, albums, discogsToken, router, fileHandle]);
+    }, [username, fileName, albums, discogsToken, router, fileHandle, setGlobalLoading]);
 
     
 
@@ -367,6 +376,9 @@ export default function CollectionClientPage() {
         // 클라우드 저장소 사용 중인 경우
         if (cloudFile) {
             try {
+                // 클라우드 저장 시 전역 로딩 표시
+                setGlobalLoading(true, '클라우드에 앨범 컬렉션을 저장하는 중...');
+                
                 // URL 파라미터에서 실제 값 가져오기
                 const currentUsername = searchParams.get('username') || username || '';
                 const currentCollectionName = searchParams.get('collectionName') || fileName.replace(".json", "") || 'untitled';
@@ -397,9 +409,12 @@ export default function CollectionClientPage() {
                 
                 await saveToCloudFile(cloudFile, JSON.stringify(contentToSave, null, 2));
                 await setCollectionMetadata(username, fileName.replace(".json", ""), updatedAlbums.length);
+                
+                setGlobalLoading(false); // 클라우드 저장 완료 후 로딩 해제
                 toast.success(`${getStorageTypeDisplay()}에 저장되었습니다.`);
             } catch (error) {
                 console.error("Failed to save to cloud:", error);
+                setGlobalLoading(false); // 에러 시에도 로딩 해제
                 toast.error(`클라우드 저장에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
             }
             return;
@@ -453,7 +468,7 @@ export default function CollectionClientPage() {
             console.error("Permission to write file was denied.");
             toast.error("파일 쓰기 권한이 거부되었습니다.");
         }
-    }, [fileHandle, hasPermission, username, fileName, searchParams]);
+    }, [fileHandle, hasPermission, username, fileName, searchParams, setGlobalLoading]);
 
     const handleSetDiscogsToken = useCallback(async (token: string | null) => {
         setDiscogsToken(token);
