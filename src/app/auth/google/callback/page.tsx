@@ -10,12 +10,23 @@ function GoogleCallbackContent() {
     const code = searchParams.get('code');
     const error = searchParams.get('error');
 
+    // 부모 창의 origin을 가져오는 안전한 방법
+    const getParentOrigin = () => {
+      try {
+        return window.opener?.location.origin || '*';
+      } catch (e) {
+        // Cross-origin 접근 불가 시 와일드카드 사용
+        return '*';
+      }
+    };
+
     if (error) {
       // OAuth 에러 처리
+      const targetOrigin = getParentOrigin();
       window.opener?.postMessage({
         type: 'GOOGLE_AUTH_ERROR',
         error: error
-      }, window.location.origin);
+      }, targetOrigin);
       window.close();
       return;
     }
@@ -31,11 +42,13 @@ function GoogleCallbackContent() {
       })
       .then(response => response.json())
       .then(data => {
+        const targetOrigin = getParentOrigin();
+
         if (data.error) {
           window.opener?.postMessage({
             type: 'GOOGLE_AUTH_ERROR',
             error: data.error
-          }, window.location.origin);
+          }, targetOrigin);
         } else {
           // 성공적으로 토큰을 받았을 때
           window.opener?.postMessage({
@@ -45,16 +58,17 @@ function GoogleCallbackContent() {
             expiresAt: Date.now() + (data.expires_in * 1000),
             userId: data.user_id,
             displayName: data.display_name
-          }, window.location.origin);
+          }, targetOrigin);
         }
         window.close();
       })
       .catch(error => {
         console.error('Token exchange error:', error);
+        const targetOrigin = getParentOrigin();
         window.opener?.postMessage({
           type: 'GOOGLE_AUTH_ERROR',
           error: 'Token exchange failed'
-        }, window.location.origin);
+        }, targetOrigin);
         window.close();
       });
     }

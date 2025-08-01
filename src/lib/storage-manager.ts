@@ -15,6 +15,16 @@ export class StorageManager {
     return this.services.get(provider);
   }
 
+  getProviderDisplayName(provider: StorageProvider): string {
+    const displayNames: Record<StorageProvider, string> = {
+      'local': '로컬 파일',
+      'dropbox': 'Dropbox',
+      'googledrive': 'Google Drive',
+      'onedrive': 'OneDrive'
+    };
+    return displayNames[provider] || provider;
+  }
+
   async connectToProvider(provider: StorageProvider): Promise<StorageConnection> {
     const service = this.getService(provider);
     if (!service) {
@@ -74,21 +84,6 @@ export class StorageManager {
     }
 
     return true;
-  }
-
-  getProviderDisplayName(provider: StorageProvider): string {
-    switch (provider) {
-      case 'dropbox':
-        return 'Dropbox';
-      case 'googledrive':
-        return 'Google Drive';
-      case 'onedrive':
-        return 'OneDrive';
-      case 'local':
-        return '로컬 파일';
-      default:
-        return provider;
-    }
   }
 }
 

@@ -1,22 +1,5 @@
 import { StorageService, StorageConnection, CloudFile, StorageProvider } from '@/types/storage';
-
-interface DropboxEntry {
-  '.tag': string;
-  id: string;
-  name: string;
-  path_display: string;
-  size: number;
-  client_modified: string;
-}
-
-interface DropboxEntry {
-  '.tag': string;
-  id: string;
-  name: string;
-  path_display: string;
-  size: number;
-  client_modified: string;
-}
+import { handleAPIError, createEnvironmentError, AuthenticationError, NetworkError } from '@/lib/error-handler';
 
 interface DropboxEntry {
   '.tag': string;
@@ -33,63 +16,113 @@ export class DropboxService implements StorageService {
   private readonly redirectUri = process.env.NEXT_PUBLIC_DROPBOX_REDIRECT_URI;
 
   async authenticate(): Promise<StorageConnection> {
-    if (!this.clientId || !this.redirectUri) {
-      throw new Error(`Dropbox 연동을 위해서는 환경 변수 설정이 필요합니다. 
-        
-필요한 환경 변수:
-- NEXT_PUBLIC_DROPBOX_CLIENT_ID
-- NEXT_PUBLIC_DROPBOX_REDIRECT_URI
+    console.log('🔍 Dropbox authenticate started');
+    console.log('🔍 Client ID:', this.clientId ? 'Present' : 'Missing');
+    console.log('🔍 Redirect URI:', this.redirectUri ? 'Present' : 'Missing');
 
-.env.local 파일에 해당 값들을 설정해주세요.`);
+    if (!this.clientId || !this.redirectUri) {
+      const error = createEnvironmentError('Dropbox', [
+        'NEXT_PUBLIC_DROPBOX_CLIENT_ID',
+        'NEXT_PUBLIC_DROPBOX_REDIRECT_URI'
+      ]);
+      console.error('🔍 Environment error:', error.message);
+      throw error;
     }
 
-    // OAuth 2.0 flow
-    const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${this.clientId}&redirect_uri=${encodeURIComponent(this.redirectUri)}&response_type=code&token_access_type=offline`;
-    
-    // Open popup window for authentication
-    const popup = window.open(authUrl, 'dropbox-auth', 'width=500,height=600');
-    
-    return new Promise((resolve, reject) => {
-      const checkClosed = setInterval(() => {
-        if (popup?.closed) {
-          clearInterval(checkClosed);
-          reject(new Error('Authentication cancelled'));
-        }
-      }, 1000);
+    try {
+      // OAuth 2.0 flow
+      const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${this.clientId}&redirect_uri=${encodeURIComponent(this.redirectUri)}&response_type=code&token_access_type=offline`;
+      console.log('🔍 Opening popup with URL:', authUrl);
 
-      // Listen for message from popup
-      const messageHandler = (event: MessageEvent) => {
-        if (event.origin !== window.location.origin) return;
-        
-        if (event.data.type === 'DROPBOX_AUTH_SUCCESS') {
-          clearInterval(checkClosed);
-          popup?.close();
-          window.removeEventListener('message', messageHandler);
-          
-          this.accessToken = event.data.accessToken;
-          resolve({
-            provider: 'dropbox',
-            accessToken: event.data.accessToken,
-            refreshToken: event.data.refreshToken,
-            expiresAt: event.data.expiresAt,
-            userId: event.data.userId,
-            displayName: event.data.displayName
-          });
-        } else if (event.data.type === 'DROPBOX_AUTH_ERROR') {
-          clearInterval(checkClosed);
-          popup?.close();
-          window.removeEventListener('message', messageHandler);
-          reject(new Error(event.data.error));
-        }
-      };
+      // Open popup window for authentication
+      const popup = window.open(authUrl, 'dropbox-auth', 'width=500,height=600');
 
-      window.addEventListener('message', messageHandler);
-    });
+      if (!popup) {
+        throw new Error('팝업이 차단되었습니다. 팝업 차단을 해제하고 다시 시도해주세요.');
+      }
+
+      console.log('🔍 Popup opened, waiting for callback...');
+
+      return new Promise((resolve, reject) => {
+        let isResolved = false;
+
+        const checkClosed = setInterval(() => {
+          if (popup?.closed && !isResolved) {
+            console.log('🔍 Popup was closed by user');
+            clearInterval(checkClosed);
+            isResolved = true;
+            reject(new Error('사용자가 인증을 취소했습니다.'));
+          }
+        }, 1000);
+
+        // Listen for message from popup
+        const messageHandler = (event: MessageEvent) => {
+          console.log('🔍 Received message:', event);
+          console.log('🔍 Message origin:', event.origin);
+          console.log('🔍 Current origin:', window.location.origin);
+
+          // Origin check - be more flexible for development
+          const validOrigins = [
+            window.location.origin,
+            'http://localhost:3001',
+            'http://127.0.0.1:3001',
+            'http://10.5.0.2:3001' // Add Docker/network origin
+          ];
+
+          if (!validOrigins.includes(event.origin)) {
+            console.warn('🔍 Message from invalid origin:', event.origin);
+            return;
+          }
+
+          if (event.data.type === 'DROPBOX_AUTH_SUCCESS') {
+            console.log('🔍 Authentication successful');
+            clearInterval(checkClosed);
+            popup?.close();
+            window.removeEventListener('message', messageHandler);
+            isResolved = true;
+
+            this.accessToken = event.data.accessToken;
+            resolve({
+              provider: 'dropbox',
+              accessToken: event.data.accessToken,
+              refreshToken: event.data.refreshToken,
+              expiresAt: event.data.expiresAt,
+              userId: event.data.userId,
+              displayName: event.data.displayName
+            });
+          } else if (event.data.type === 'DROPBOX_AUTH_ERROR') {
+            console.error('🔍 Authentication error:', event.data.error);
+            clearInterval(checkClosed);
+            popup?.close();
+            window.removeEventListener('message', messageHandler);
+            isResolved = true;
+            reject(new Error(event.data.error));
+          }
+        };
+
+        window.addEventListener('message', messageHandler);
+
+        // Add timeout to prevent hanging forever
+        setTimeout(() => {
+          if (!isResolved) {
+            console.error('🔍 Authentication timeout');
+            clearInterval(checkClosed);
+            popup?.close();
+            window.removeEventListener('message', messageHandler);
+            isResolved = true;
+            reject(new Error('인증 시간이 초과되었습니다. 다시 시도해주세요.'));
+          }
+        }, 300000); // 5 minutes timeout
+      });
+    } catch (error) {
+      console.error('🔍 Dropbox authenticate error:', error);
+      throw handleAPIError(error, 'Dropbox');
+    }
   }
 
   async listFiles(path: string = ''): Promise<CloudFile[]> {
     if (!this.accessToken) {
-      throw new Error('Not authenticated');
+      throw new AuthenticationError('Dropbox');
     }
 
     console.log('🔍 Dropbox listFiles called with path:', path, 'token:', this.accessToken ? 'Token exists' : 'No token');
@@ -112,7 +145,7 @@ export class DropboxService implements StorageService {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('🔍 Dropbox API error:', errorText);
-        throw new Error(`Failed to list files: ${response.status} ${errorText}`);
+        throw new NetworkError('Dropbox', response.status);
       }
 
       const data = await response.json();
@@ -144,118 +177,134 @@ export class DropboxService implements StorageService {
       return [];
     } catch (error) {
       console.error('🔍 Dropbox listFiles error:', error);
-      throw error;
+      throw handleAPIError(error, 'Dropbox');
     }
   }
 
   async getFile(fileId: string): Promise<string> {
     if (!this.accessToken) {
-      throw new Error('Not authenticated');
+      throw new AuthenticationError('Dropbox');
     }
 
-    const response = await fetch('/api/dropbox/proxy', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        action: 'download_file',
-        data: { path: fileId },
-        accessToken: this.accessToken
-      })
-    });
+    try {
+      const response = await fetch('/api/dropbox/proxy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'download_file',
+          data: { path: fileId },
+          accessToken: this.accessToken
+        })
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to download file');
+      if (!response.ok) {
+        throw new NetworkError('Dropbox', response.status);
+      }
+
+      const result = await response.json();
+      return result.content;
+    } catch (error) {
+      throw handleAPIError(error, 'Dropbox');
     }
-
-    const result = await response.json();
-    return result.content;
   }
 
   async saveFile(fileId: string, content: string): Promise<void> {
     if (!this.accessToken) {
-      throw new Error('Not authenticated');
+      throw new AuthenticationError('Dropbox');
     }
 
-    const response = await fetch('/api/dropbox/proxy', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        action: 'upload_file',
-        data: { 
-          path: fileId,
-          content: content,
-          mode: 'overwrite'
+    try {
+      const response = await fetch('/api/dropbox/proxy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
         },
-        accessToken: this.accessToken
-      })
-    });
+        body: JSON.stringify({
+          action: 'upload_file',
+          data: {
+            path: fileId,
+            content: content,
+            mode: 'overwrite'
+          },
+          accessToken: this.accessToken
+        })
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to save file');
+      if (!response.ok) {
+        throw new NetworkError('Dropbox', response.status);
+      }
+    } catch (error) {
+      throw handleAPIError(error, 'Dropbox');
     }
   }
 
   async createFile(name: string, content: string, path: string = ''): Promise<CloudFile> {
     if (!this.accessToken) {
-      throw new Error('Not authenticated');
+      throw new AuthenticationError('Dropbox');
     }
 
-    const filePath = path ? `${path}/${name}` : `/${name}`;
-    
-    const response = await fetch('/api/dropbox/proxy', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        action: 'upload_file',
-        data: { 
-          path: filePath,
-          content: content,
-          mode: 'add'
+    try {
+      const filePath = path ? `${path}/${name}` : `/${name}`;
+
+      const response = await fetch('/api/dropbox/proxy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
         },
-        accessToken: this.accessToken
-      })
-    });
+        body: JSON.stringify({
+          action: 'upload_file',
+          data: {
+            path: filePath,
+            content: content,
+            mode: 'add'
+          },
+          accessToken: this.accessToken
+        })
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to create file');
+      if (!response.ok) {
+        throw new NetworkError('Dropbox', response.status);
+      }
+
+      const data = await response.json();
+      return {
+        id: data.path_display,
+        name: data.name,
+        path: data.path_display,
+        size: data.size,
+        modifiedAt: data.client_modified,
+        provider: 'dropbox'
+      };
+    } catch (error) {
+      throw handleAPIError(error, 'Dropbox');
     }
-
-    const data = await response.json();
-    return {
-      id: data.path_display,
-      name: data.name,
-      path: data.path_display,
-      size: data.size,
-      modifiedAt: data.client_modified,
-      provider: 'dropbox'
-    };
   }
 
   async deleteFile(fileId: string): Promise<void> {
     if (!this.accessToken) {
-      throw new Error('Not authenticated');
+      throw new AuthenticationError('Dropbox');
     }
 
-    const response = await fetch('/api/dropbox/proxy', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        action: 'delete_file',
-        data: { path: fileId },
-        accessToken: this.accessToken
-      })
-    });
+    try {
+      const response = await fetch('/api/dropbox/proxy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'delete_file',
+          data: { path: fileId },
+          accessToken: this.accessToken
+        })
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to delete file');
+      if (!response.ok) {
+        throw new NetworkError('Dropbox', response.status);
+      }
+    } catch (error) {
+      throw handleAPIError(error, 'Dropbox');
     }
   }
 }

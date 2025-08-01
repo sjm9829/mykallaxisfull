@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X } from "lucide-react";
 import { toast } from "sonner";
+import { useApiCall } from "@/lib/useAsyncState";
 import { loadFromGist, isValidGistUrl, type CollectionData } from "@/services/gist";
 
 interface LoadFromGistModalProps {
@@ -15,7 +16,7 @@ interface LoadFromGistModalProps {
 
 export function LoadFromGistModal({ onClose, onLoad }: LoadFromGistModalProps) {
   const [gistUrl, setGistUrl] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const { isLoading, execute } = useApiCall<CollectionData>();
 
   const handleLoad = async () => {
     if (!gistUrl.trim()) {
@@ -28,18 +29,13 @@ export function LoadFromGistModal({ onClose, onLoad }: LoadFromGistModalProps) {
       return;
     }
 
-    setIsLoading(true);
-    try {
+    await execute(async () => {
       const data = await loadFromGist(gistUrl.trim());
       onLoad(data);
       toast.success("컬렉션을 성공적으로 불러왔습니다!");
       onClose();
-    } catch (error) {
-      console.error("Gist 로드 오류:", error);
-      toast.error(error instanceof Error ? error.message : "컬렉션을 불러오는데 실패했습니다.");
-    } finally {
-      setIsLoading(false);
-    }
+      return data;
+    });
   };
 
   return (

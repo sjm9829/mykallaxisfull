@@ -10,12 +10,23 @@ function DropboxCallbackContent() {
     const code = searchParams.get('code');
     const error = searchParams.get('error');
 
+    // 부모 창의 origin을 가져오기 (더 안전한 방법)
+    const getParentOrigin = () => {
+      try {
+        return window.opener?.location.origin || '*';
+      } catch (e) {
+        // Cross-origin 접근 불가 시 와일드카드 사용 (보안상 주의)
+        return '*';
+      }
+    };
+
     if (error) {
       // Send error to parent window
+      const targetOrigin = getParentOrigin();
       window.opener?.postMessage({
         type: 'DROPBOX_AUTH_ERROR',
         error: error
-      }, window.location.origin);
+      }, targetOrigin);
       window.close();
       return;
     }
@@ -42,6 +53,17 @@ function DropboxCallbackContent() {
 
       const tokenData = await response.json();
       
+      // 부모 창의 origin을 가져오기
+      const getParentOrigin = () => {
+        try {
+          return window.opener?.location.origin || '*';
+        } catch (e) {
+          return '*';
+        }
+      };
+
+      const targetOrigin = getParentOrigin();
+
       // Send success data to parent window
       window.opener?.postMessage({
         type: 'DROPBOX_AUTH_SUCCESS',
@@ -50,15 +72,26 @@ function DropboxCallbackContent() {
         expiresAt: Date.now() + (tokenData.expires_in * 1000),
         userId: tokenData.account_id,
         displayName: tokenData.account_id // Dropbox doesn't provide display name in token response
-      }, window.location.origin);
-      
+      }, targetOrigin);
+
       window.close();
     } catch (error) {
       console.error('Token exchange error:', error);
+
+      const getParentOrigin = () => {
+        try {
+          return window.opener?.location.origin || '*';
+        } catch (e) {
+          return '*';
+        }
+      };
+
+      const targetOrigin = getParentOrigin();
+
       window.opener?.postMessage({
         type: 'DROPBOX_AUTH_ERROR',
         error: 'Token exchange failed'
-      }, window.location.origin);
+      }, targetOrigin);
       window.close();
     }
   };

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { StorageProvider } from '@/types/storage';
 import { storageManager } from '@/lib/storage-manager';
-import { Cloud, HardDrive, Loader2, X, Info } from 'lucide-react';
+import { Cloud, HardDrive, Loader2, X } from 'lucide-react';
 
 interface StorageConnectionModalProps {
   onClose: () => void;
@@ -68,40 +68,11 @@ export function StorageConnectionModal({ onClose, onConnectionSelected }: Storag
       
       // Show detailed error message
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-      alert(`${storageManager.getProviderDisplayName(provider)} 연결 실패:\n\n${errorMessage}`);
+      alert(`연결 실패:\n\n${errorMessage}`);
     } finally {
       setIsConnecting(false);
       setConnectingProvider(null);
     }
-  };
-
-  const handleShowSetupGuide = () => {
-    const guideMessage = `클라우드 스토리지 연동 설정 방법:
-
-🔹 Dropbox 설정:
-1. https://www.dropbox.com/developers/apps 방문
-2. "Create app" 클릭
-3. "Scoped access" 선택
-4. "App folder" 또는 "Full Dropbox" 선택  
-5. 앱 이름 입력
-6. App key를 복사하여 NEXT_PUBLIC_DROPBOX_CLIENT_ID에 설정
-7. App secret을 복사하여 DROPBOX_CLIENT_SECRET에 설정
-8. OAuth2 redirect URL에 다음 추가:
-   http://localhost:3000/auth/dropbox/callback
-
-🔹 Google Drive 설정:
-1. https://console.developers.google.com 방문
-2. 새 프로젝트 생성 또는 선택
-3. "APIs & Services" > "Library" 에서 Google Drive API 활성화
-4. "Credentials" > "Create Credentials" > "OAuth 2.0 Client IDs"
-5. 애플리케이션 유형을 "Web application" 선택
-6. 승인된 JavaScript 원본에 http://localhost:3000 추가
-7. 클라이언트 ID를 NEXT_PUBLIC_GOOGLE_CLIENT_ID에 설정
-8. API 키도 생성하여 NEXT_PUBLIC_GOOGLE_API_KEY에 설정
-
-.env.local 파일에 환경 변수를 설정한 후 개발 서버를 재시작하세요.`;
-    
-    alert(guideMessage);
   };
 
   const providers: Array<{

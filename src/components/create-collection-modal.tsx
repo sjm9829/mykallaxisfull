@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useModalAccessibility } from '@/lib/useModalAccessibility';
+import { useFileOperation } from '@/lib/useAsyncState';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,7 +22,7 @@ export function CreateCollectionModal({
   const modalRef = useModalAccessibility(onClose);
   const [username, setUsername] = useState(initialUsername);
   const [collectionName, setCollectionName] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const { isLoading, execute } = useFileOperation();
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,12 +31,11 @@ export function CreateCollectionModal({
       return;
     }
 
-    setIsLoading(true);
-    try {
+    await execute(async () => {
       const fileHandle = await createNewFileHandle(`${collectionName}.json`);
       if (!fileHandle) {
         toast.info("컬렉션 생성이 취소되었습니다.");
-        return;
+        return { message: "컬렉션 생성이 취소되었습니다." };
       }
 
       const initialContent = JSON.stringify({ _metadata: { username: username, collectionName: collectionName }, albums: [] }, null, 2);
@@ -47,12 +47,9 @@ export function CreateCollectionModal({
       await setActiveFileHandle(fileHandle);
       await setLastOpenedCollection(username, collectionName);
       onCollectionCreated(username, collectionName);
-    } catch (error) {
-      console.error("컬렉션 생성 실패:", error);
-      toast.error("컬렉션 생성에 실패했습니다.");
-    } finally {
-      setIsLoading(false);
-    }
+
+      return { message: "컬렉션이 성공적으로 생성되었습니다." };
+    });
   };
 
   return (
