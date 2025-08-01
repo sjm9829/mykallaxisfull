@@ -42,7 +42,17 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const response = await fetch(url.toString());
+    const response = await fetch(url.toString(), {
+      // 이미지 프록시 최적화
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'image/webp,image/avif,image/apng,image/*,*/*;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Cache-Control': 'max-age=3600', // 1시간 캐시
+      },
+      // 타임아웃 설정
+      signal: AbortSignal.timeout(15000), // 15초 타임아웃
+    });
 
     if (!response.ok) {
       throw new Error(`Failed to fetch image: ${response.statusText}`);

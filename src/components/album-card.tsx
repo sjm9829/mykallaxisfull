@@ -15,14 +15,25 @@ export function AlbumCard({ album, onClick, onDelete }: AlbumCardProps) {
   const primaryImageUrl = getPrimaryCoverImage(album);
   const [imageError, setImageError] = React.useState(false);
   const [imageLoading, setImageLoading] = React.useState(true);
+  const [retryCount, setRetryCount] = React.useState(0);
 
   const handleImageLoad = () => {
     setImageLoading(false);
+    setImageError(false);
+    setRetryCount(0); // 성공시 재시도 카운트 리셋
   };
 
   const handleImageError = () => {
-    setImageError(true);
     setImageLoading(false);
+    if (retryCount < 2) { // 최대 2번 재시도
+      setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+        setImageError(false);
+        setImageLoading(true);
+      }, 1000 * (retryCount + 1)); // 점진적 지연 (1초, 2초)
+    } else {
+      setImageError(true);
+    }
   };
 
   return (
@@ -58,9 +69,10 @@ export function AlbumCard({ album, onClick, onDelete }: AlbumCardProps) {
               style={{ objectFit: 'cover' }}
               onLoad={handleImageLoad}
               onError={handleImageError}
-              loading="lazy"
+              loading="eager" // lazy에서 eager로 변경하여 즉시 로딩
               placeholder="blur"
               blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R+Rq5xDGuJ4O2yl+odzqd2qjvz/2Q=="
+              key={`${album.id}-${retryCount}`} // 재시도시 컴포넌트 재렌더링 강제
             />
           </>
         ) : (
