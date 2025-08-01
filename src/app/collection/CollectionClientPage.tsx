@@ -297,6 +297,15 @@ export default function CollectionClientPage() {
         } catch (error) {
             console.error("Error loading cloud file:", error);
             setAlbums([]);
+            
+            // 토큰 만료 오류인 경우 특별 처리
+            if (error instanceof Error && error.message.includes('클라우드 인증이 만료되었습니다')) {
+                toast.warning("클라우드 인증이 만료되었습니다. 다시 로그인해주세요.");
+                setIsLoading(false);
+                router.push('/');
+                return;
+            }
+            
             toast.error(`클라우드 파일을 읽는 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
             setIsLoading(false);
             router.push('/');
@@ -438,6 +447,14 @@ export default function CollectionClientPage() {
             window.location.reload();
         } catch (error) {
             console.error('컬렉션 설정 저장 실패:', error);
+            
+            // 토큰 만료 오류인 경우 특별 처리
+            if (error instanceof Error && error.message.includes('클라우드 인증이 만료되었습니다')) {
+                toast.warning("클라우드 인증이 만료되었습니다. 다시 로그인해주세요.");
+                router.push('/');
+                return;
+            }
+            
             toast.error('컬렉션 설정 저장에 실패했습니다.');
             
             // 실패 시 로딩 상태 해제
@@ -498,6 +515,14 @@ export default function CollectionClientPage() {
             } catch (error) {
                 console.error("Failed to save to cloud:", error);
                 setGlobalLoading(false); // 에러 시에도 로딩 해제
+                
+                // 토큰 만료 오류인 경우 특별 처리
+                if (error instanceof Error && error.message.includes('클라우드 인증이 만료되었습니다')) {
+                    toast.warning("클라우드 인증이 만료되었습니다. 다시 로그인해주세요.");
+                    router.push('/');
+                    return;
+                }
+                
                 toast.error(`클라우드 저장에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
             }
             return;
@@ -551,7 +576,7 @@ export default function CollectionClientPage() {
             console.error("Permission to write file was denied.");
             toast.error("파일 쓰기 권한이 거부되었습니다.");
         }
-    }, [fileHandle, hasPermission, username, fileName, searchParams, setGlobalLoading]);
+    }, [fileHandle, hasPermission, username, fileName, searchParams, setGlobalLoading, router]);
 
     const handleSetDiscogsToken = useCallback(async (token: string | null) => {
         setDiscogsToken(token);
