@@ -7,7 +7,7 @@ import { AlbumDetailModal } from "@/components/album-detail-modal";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import type { Album, AlbumType } from "@/types/album";
 import { saveFile, verifyPermission } from '@/lib/file-system';
-import { getActiveCloudFile, saveToCloudFile, isUsingCloudStorage, getStorageTypeDisplay, setActiveCloudFile } from '@/lib/cloud-storage';
+import { getActiveCloudFile, saveToCloudFile, isUsingCloudStorage, getStorageTypeDisplay, setActiveCloudFile, getCloudConnectionStatus } from '@/lib/cloud-storage';
 import { getCollectionMetadata, setCollectionMetadata, getFileHandleFromUser, getActiveFileHandle } from '@/lib/db';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useGlobalLoading } from '@/contexts/LoadingContext';
@@ -232,6 +232,16 @@ export default function CollectionClientPage() {
         }
 
         try {
+            // 토큰 상태 확인
+            const connectionStatus = getCloudConnectionStatus();
+            if (connectionStatus === 'expired') {
+                console.log('🚨 Token expired during cloud file loading');
+                toast.error("인증이 만료되었습니다. 클라우드 저장소에 다시 연결해주세요.");
+                setIsLoading(false);
+                router.push('/');
+                return;
+            }
+
             const cloudFile = getActiveCloudFile();
             if (!cloudFile) {
                 console.error("No active cloud file found");
@@ -322,6 +332,18 @@ export default function CollectionClientPage() {
             if (currentUsername && currentCollectionName) {
                 console.log('🔄 Initializing collection:', { currentUsername, currentCollectionName });
                 
+                // 클라우드 연결 상태 확인
+                const connectionStatus = getCloudConnectionStatus();
+                console.log('☁️ Cloud connection status:', connectionStatus);
+                
+                if (connectionStatus === 'expired') {
+                    console.log('🚨 Token expired, redirecting to home page for re-authentication');
+                    toast.error("인증이 만료되었습니다. 클라우드 저장소에 다시 연결해주세요.");
+                    setIsLoading(false);
+                    router.push('/');
+                    return;
+                }
+                
                 // 먼저 클라우드 파일 확인 (우선순위)
                 const cloudFile = getActiveCloudFile();
                 console.log('☁️ Active cloud file:', cloudFile);
@@ -354,7 +376,7 @@ export default function CollectionClientPage() {
         };
 
         initializeCollection();
-    }, [searchParams, loadFileContent, loadCloudFileContent]);
+    }, [searchParams, loadFileContent, loadCloudFileContent, router]);
 
     // 컬렉션 설정 저장 함수
     const handleCollectionSettingsSave = useCallback(async (newUsername: string, newCollectionName: string) => {
@@ -380,6 +402,15 @@ export default function CollectionClientPage() {
             const cloudFile = getActiveCloudFile();
             
             if (cloudFile) {
+                // 토큰 상태 확인
+                const connectionStatus = getCloudConnectionStatus();
+                if (connectionStatus === 'expired') {
+                    console.log('🚨 Token expired during collection settings save');
+                    toast.error("인증이 만료되었습니다. 클라우드 저장소에 다시 연결해주세요.");
+                    router.push('/');
+                    return;
+                }
+
                 // 클라우드 저장 시 전역 로딩 표시
                 setGlobalLoading(true, '클라우드에 컬렉션 설정을 저장하는 중...');
                 // 클라우드 저장
@@ -476,6 +507,15 @@ export default function CollectionClientPage() {
         // 클라우드 저장소 사용 중인 경우
         if (cloudFile) {
             try {
+                // 토큰 상태 확인
+                const connectionStatus = getCloudConnectionStatus();
+                if (connectionStatus === 'expired') {
+                    console.log('🚨 Token expired during save operation');
+                    toast.error("인증이 만료되었습니다. 클라우드 저장소에 다시 연결해주세요.");
+                    router.push('/');
+                    return;
+                }
+
                 // 클라우드 저장 시 전역 로딩 표시
                 setGlobalLoading(true, '클라우드에 앨범 컬렉션을 저장하는 중...');
                 

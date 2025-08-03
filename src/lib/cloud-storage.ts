@@ -8,7 +8,27 @@ interface CloudFileInfo {
   fileName: string;
 }
 
-export function getActiveCloudFile(): CloudFileInfo | null {
+// 토큰 만료 상태를 확인하는 함수
+export function getCloudConnectionStatus(): 'connected' | 'expired' | 'disconnected' {
+  try {
+    const connection = storageManager.getActiveConnection();
+    if (!connection) {
+      return 'disconnected';
+    }
+
+    // 토큰 만료 확인
+    if (connection.expiresAt && Date.now() > connection.expiresAt) {
+      return 'expired';
+    }
+
+    return 'connected';
+  } catch (error) {
+    console.error('Error checking cloud connection status:', error);
+    return 'disconnected';
+  }
+}
+
+export function getActiveCloudFile() {
   try {
     const stored = localStorage.getItem('active-cloud-file');
     if (!stored) return null;
