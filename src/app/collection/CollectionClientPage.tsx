@@ -875,19 +875,19 @@ export default function CollectionClientPage() {
 
     return (
         <TooltipProvider>
-            <main className="flex min-h-screen flex-col items-center p-8 sm:p-16 custom-scrollbar">
-                <div className="w-full max-w-6xl mt-8">
-                    <div className="flex justify-between items-center mb-6">
-                        <div className="flex flex-col">
-                            <h1 className="text-2xl font-bold">{fileName.replace(".json", "")}</h1>
-                            <div className="flex items-center gap-2 -mt-1">
-                                <p className="text-lg font-normal text-zinc-500 dark:text-zinc-400">@{username}</p>
-                                <span className="text-zinc-400 dark:text-zinc-500">•</span>
-                                <p className="text-lg font-normal text-zinc-500 dark:text-zinc-400">
+            <main className="flex min-h-screen flex-col items-center p-4 sm:p-8 md:p-16 custom-scrollbar">
+                <div className="w-full max-w-6xl mt-4 sm:mt-8">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6">
+                        <div className="flex flex-col mb-3 sm:mb-0">
+                            <h1 className="text-xl sm:text-2xl font-bold">{fileName.replace(".json", "")}</h1>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 -mt-1">
+                                <p className="text-base sm:text-lg font-normal text-zinc-500 dark:text-zinc-400">@{username}</p>
+                                <span className="hidden sm:inline text-zinc-400 dark:text-zinc-500">•</span>
+                                <p className="text-base sm:text-lg font-normal text-zinc-500 dark:text-zinc-400">
                                     총 {filteredAndSortedAlbums.length}장의 음반
                                 </p>
-                                <span className="text-zinc-400 dark:text-zinc-500">•</span>
-                                <p className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                                <span className="hidden sm:inline text-zinc-400 dark:text-zinc-500">•</span>
+                                <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
                                     {isUsingCloudStorage() ? (
                                         <>
                                             <Cloud className="h-3 w-3" />
@@ -904,10 +904,10 @@ export default function CollectionClientPage() {
                                 </p>
                                 {priceSummary.totalWithPrice > 0 && (
                                     <>
-                                        <span className="text-zinc-400 dark:text-zinc-500">•</span>
+                                        <span className="hidden sm:inline text-zinc-400 dark:text-zinc-500">•</span>
                                         <button
                                             onClick={() => setShowPriceSummaryModal(true)}
-                                            className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+                                            className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors"
                                         >
                                             판도라의 상자
                                         </button>
@@ -915,14 +915,14 @@ export default function CollectionClientPage() {
                                 )}
                             </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 justify-center sm:justify-end">
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Button
                                         variant="default"
                                         size="icon"
                                         onClick={handleShareCollection}
-                                        className="h-9 w-9 rounded-full bg-blue-600 text-white hover:bg-blue-700"
+                                        className="h-10 w-10 sm:h-9 sm:w-9 rounded-full bg-blue-600 text-white hover:bg-blue-700"
                                     >
                                         <Share2 className="h-5 w-5" />
                                         <span className="sr-only">컬렉션 공유</span>
@@ -957,7 +957,7 @@ export default function CollectionClientPage() {
                                             <Button
                                                 variant="default"
                                                 size="icon"
-                                                className="h-9 w-9 rounded-full bg-zinc-700 text-white hover:bg-zinc-800"
+                                                className="h-10 w-10 sm:h-9 sm:w-9 rounded-full bg-zinc-700 text-white hover:bg-zinc-800"
                                             >
                                                 <Settings className="h-5 w-5" />
                                             </Button>
@@ -994,9 +994,9 @@ export default function CollectionClientPage() {
                     </div>
 
                     {/* 검색, 필터, 정렬 UI */}
-                    <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 mb-4 sm:mb-6">
                         <Select value={filterType} onValueChange={(value: AlbumType | 'all') => setFilterType(value)}>
-                            <SelectTrigger className="w-[180px] border border-zinc-200 dark:border-zinc-800">
+                            <SelectTrigger className="w-full sm:w-[180px] h-12 sm:h-10 border border-zinc-200 dark:border-zinc-800">
                                 <SelectValue placeholder="모든 유형" />
                             </SelectTrigger>
                             <SelectContent className="bg-white dark:bg-zinc-800 shadow-lg rounded-md border border-zinc-200 dark:border-zinc-800">
@@ -1009,7 +1009,7 @@ export default function CollectionClientPage() {
                         </Select>
 
                         <Select value={sortKey} onValueChange={(value: keyof Album | '') => setSortKey(value)}>
-                            <SelectTrigger className="w-[180px] border border-zinc-200 dark:border-zinc-800">
+                            <SelectTrigger className="w-full sm:w-[180px] h-12 sm:h-10 border border-zinc-200 dark:border-zinc-800">
                                 <SelectValue placeholder="정렬 기준" />
                             </SelectTrigger>
                             <SelectContent className="bg-white dark:bg-zinc-800 shadow-lg rounded-md border border-zinc-200 dark:border-zinc-800">
@@ -1021,46 +1021,48 @@ export default function CollectionClientPage() {
                             </SelectContent>
                         </Select>
 
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                                    className="h-[36px] w-[36px] flex-shrink-0 border border-zinc-200 dark:border-zinc-800"
-                                >
-                                    {sortOrder === 'asc' ? <ArrowUp className="h-5 w-5" /> : <ArrowDown className="h-5 w-5" />}
-                                    <span className="sr-only">정렬 순서 변경</span>
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>정렬 순서를 {sortOrder === 'asc' ? '내림차순' : '오름차순'}으로 변경</p>
-                            </TooltipContent>
-                        </Tooltip>
+                        <div className="flex gap-3 sm:gap-4 sm:ml-auto">
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                                        className="h-12 w-12 sm:h-[36px] sm:w-[36px] flex-shrink-0 border border-zinc-200 dark:border-zinc-800"
+                                    >
+                                        {sortOrder === 'asc' ? <ArrowUp className="h-5 w-5" /> : <ArrowDown className="h-5 w-5" />}
+                                        <span className="sr-only">정렬 순서 변경</span>
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>정렬 순서를 {sortOrder === 'asc' ? '내림차순' : '오름차순'}으로 변경</p>
+                                </TooltipContent>
+                            </Tooltip>
 
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <div className="relative ml-auto">
-                                    <Input
-                                        type="text"
-                                        placeholder="앨범 검색 (제목, 아티스트, 레이블)"
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="pl-10 pr-4 py-2 w-[300px] border border-zinc-200 dark:border-zinc-800"
-                                    />
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-500" />
-                                </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>제목, 아티스트, 레이블로 앨범을 검색할 수 있습니다</p>
-                            </TooltipContent>
-                        </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className="relative flex-1 sm:flex-initial">
+                                        <Input
+                                            type="text"
+                                            placeholder="앨범 검색 (제목, 아티스트, 레이블)"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="pl-12 pr-4 py-3 sm:pl-10 sm:pr-4 sm:py-2 w-full sm:w-[300px] h-12 sm:h-10 border border-zinc-200 dark:border-zinc-800 text-base sm:text-sm"
+                                        />
+                                        <Search className="absolute left-4 sm:left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-500" />
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>제목, 아티스트, 레이블로 앨범을 검색할 수 있습니다</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </div>
                     </div>
 
                     {/* 필터링된 결과 개수 표시 */}
                     {(searchTerm || filterType !== 'all') && (
-                        <div className="mb-4">
-                            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                        <div className="mb-3 sm:mb-4">
+                            <p className="text-sm sm:text-sm text-zinc-600 dark:text-zinc-400 px-1">
                                 {filteredAndSortedAlbums.length}개의 음반이 검색되었습니다
                                 {searchTerm && ` (검색어: "${searchTerm}")`}
                                 {filteredAndSortedAlbums.length !== albums.length && ` / 전체 ${albums.length}장`}
@@ -1084,8 +1086,8 @@ export default function CollectionClientPage() {
                         />
                     ) : (
                         // 검색 결과가 없을 때만 기존 메시지 표시
-                        <div className="flex flex-col items-center justify-center h-64 text-zinc-500 dark:text-zinc-400">
-                            <p className="text-lg mb-4">검색 결과가 없습니다.</p>
+                        <div className="flex flex-col items-center justify-center h-48 sm:h-64 text-zinc-500 dark:text-zinc-400">
+                            <p className="text-base sm:text-lg mb-4">검색 결과가 없습니다.</p>
                         </div>
                     )}
                 </div>
@@ -1208,10 +1210,9 @@ export default function CollectionClientPage() {
                         variant="default"
                         size="icon"
                         onClick={() => setShowForm(true)}
-                        className="fixed bottom-4 h-14 w-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 z-50"
-                        style={{ right: 'calc(50vw - 24rem - 11.5rem)' }}
+                        className="fixed bottom-6 right-6 sm:bottom-4 h-16 w-16 sm:h-14 sm:w-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 z-50 sm:right-[calc(50vw-24rem-11.5rem)]"
                     >
-                        <Plus className="h-7 w-7" />
+                        <Plus className="h-8 w-8 sm:h-7 sm:w-7" />
                         <span className="sr-only">앨범 추가</span>
                     </Button>
                 </TooltipTrigger>
