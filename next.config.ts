@@ -1,16 +1,21 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Netlify 배포를 위한 설정
-  output: process.env.NODE_ENV === 'production' ? undefined : undefined,
-  // Netlify에서 빌드 시 필요한 설정
+  // Netlify 배포 설정 (Edge Functions 사용)
+  // output: export는 API 라우트와 충돌하므로 제거
+  
+  // 실험적 기능 (문제가 있는 optimizeCss 제거)
   experimental: {
-    // serverComponentsExternalPackages를 사용하여 서버 사이드에서만 실행되는 패키지 명시
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-tooltip'],
   },
+  // 번들 최적화
   transpilePackages: ['html-to-image'],
+  // 이미지 최적화 (Netlify 환경에 맞게 설정)
   images: {
-    // Netlify에서 이미지 캐시 문제 해결
-    unoptimized: true,
+    unoptimized: true, // Netlify에서 이미지 최적화 문제 해결
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    formats: ['image/webp', 'image/avif'],
     remotePatterns: [
       {
         protocol: 'https',
@@ -20,32 +25,13 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  async headers() {
-    return [
-      {
-        source: '/:path*',
-        headers: [
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'no-referrer-when-downgrade',
-          },
-          {
-            key: 'Content-Security-Policy',
-            value: `default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://api.discogs.com;`,
-          },
-        ],
-      },
-    ];
+  // 컴파일러 최적화
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'],
+    } : false,
   },
-  /* config options here */
+  // Netlify에서 헤더는 netlify.toml과 _headers 파일로 처리
 };
 
 export default nextConfig;

@@ -1,0 +1,17 @@
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer-when-downgrade
+  X-DNS-Prefetch-Control: off
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=(), usb=(), bluetooth=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://api.dropboxapi.com https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.discogs.com https://api.dropboxapi.com https://content.dropboxapi.com https://www.googleapis.com https://api.github.com; frame-src 'self' https://accounts.google.com; object-src 'none'; base-uri 'self'; upgrade-insecure-requests;
+
+/api/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  
+/auth/*
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable

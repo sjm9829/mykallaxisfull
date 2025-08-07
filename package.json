@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "jest"
+    "test": "jest",
+    "security:audit": "bash scripts/security-audit.sh",
+    "security:deps": "npm audit --audit-level=moderate",
+    "type-check": "tsc --noEmit",
+    "build:analyze": "ANALYZE=true npm run build"
   },
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.1.15",

@@ -1008,29 +1008,29 @@ export default function CollectionClientPage() {
                             </SelectContent>
                         </Select>
 
-                        <Select value={sortKey} onValueChange={(value: keyof Album | '') => setSortKey(value)}>
-                            <SelectTrigger className="w-full sm:w-[180px] h-12 sm:h-10 border border-zinc-200 dark:border-zinc-800">
-                                <SelectValue placeholder="정렬 기준" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white dark:bg-zinc-800 shadow-lg rounded-md border border-zinc-200 dark:border-zinc-800">
-                                <SelectItem value="title">제목</SelectItem>
-                                <SelectItem value="artist">아티스트</SelectItem>
-                                <SelectItem value="releaseDate">발매일</SelectItem>
-                                <SelectItem value="createdAt">생성일</SelectItem>
-                                <SelectItem value="updatedAt">수정일</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <div className="flex gap-2 items-center">
+                            <Select value={sortKey} onValueChange={(value: keyof Album | '') => setSortKey(value)}>
+                                <SelectTrigger className="w-full sm:w-[180px] h-12 sm:h-10 border border-zinc-200 dark:border-zinc-800">
+                                    <SelectValue placeholder="정렬 기준" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white dark:bg-zinc-800 shadow-lg rounded-md border border-zinc-200 dark:border-zinc-800">
+                                    <SelectItem value="title">제목</SelectItem>
+                                    <SelectItem value="artist">아티스트</SelectItem>
+                                    <SelectItem value="releaseDate">발매일</SelectItem>
+                                    <SelectItem value="createdAt">생성일</SelectItem>
+                                    <SelectItem value="updatedAt">수정일</SelectItem>
+                                </SelectContent>
+                            </Select>
 
-                        <div className="flex gap-3 sm:gap-4 sm:ml-auto">
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Button
                                         variant="outline"
                                         size="icon"
                                         onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                                        className="h-12 w-12 sm:h-[36px] sm:w-[36px] flex-shrink-0 border border-zinc-200 dark:border-zinc-800"
+                                        className="h-12 w-12 sm:h-10 sm:w-10 flex-shrink-0 border border-zinc-200 dark:border-zinc-800"
                                     >
-                                        {sortOrder === 'asc' ? <ArrowUp className="h-5 w-5" /> : <ArrowDown className="h-5 w-5" />}
+                                        {sortOrder === 'asc' ? <ArrowUp className="h-5 w-5 sm:h-4 sm:w-4" /> : <ArrowDown className="h-5 w-5 sm:h-4 sm:w-4" />}
                                         <span className="sr-only">정렬 순서 변경</span>
                                     </Button>
                                 </TooltipTrigger>
@@ -1038,7 +1038,9 @@ export default function CollectionClientPage() {
                                     <p>정렬 순서를 {sortOrder === 'asc' ? '내림차순' : '오름차순'}으로 변경</p>
                                 </TooltipContent>
                             </Tooltip>
+                        </div>
 
+                        <div className="flex sm:ml-auto">
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <div className="relative flex-1 sm:flex-initial">
