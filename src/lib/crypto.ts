@@ -23,7 +23,7 @@ async function getKeyMaterial(password: string): Promise<CryptoKey> {
   );
 }
 
-async function getDerivedKey(keyMaterial: CryptoKey, salt: Uint8Array): Promise<CryptoKey> {
+async function getDerivedKey(keyMaterial: CryptoKey, salt: BufferSource): Promise<CryptoKey> {
   return window.crypto.subtle.deriveKey(
     {
       name: "PBKDF2",
