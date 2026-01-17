@@ -8,7 +8,7 @@
 [build.environment]
   NODE_VERSION = "20"
   # NPM_FLAGS = "--version" # 캐시 문제 방지
-  NODE_ENV = "production"
+  # NODE_ENV = "production"
 
 [[edge_functions]]
   path = "/api/discogs/verify-token"
