@@ -6,8 +6,8 @@
   package = "@netlify/plugin-nextjs"
 
 [build.environment]
-  NODE_VERSION = "18"
-  NPM_FLAGS = "--version" # 캐시 문제 방지
+  NODE_VERSION = "20"
+  # NPM_FLAGS = "--version" # 캐시 문제 방지
   NODE_ENV = "production"
 
 [[edge_functions]]
